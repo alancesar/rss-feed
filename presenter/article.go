@@ -6,7 +6,7 @@ import (
 )
 
 type (
-	Article struct {
+	ArticleResponse struct {
 		Source      string    `json:"source"`
 		Title       string    `json:"title"`
 		URL         string    `json:"url"`
@@ -14,8 +14,8 @@ type (
 	}
 )
 
-func NewArticleFromDomain(article rss.Article) Article {
-	return Article{
+func NewArticleResponseFromDomain(article rss.Article) ArticleResponse {
+	return ArticleResponse{
 		Source:      article.Source,
 		Title:       article.Title,
 		URL:         article.URL,

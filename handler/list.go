@@ -23,9 +23,9 @@ func GetFromDate(uc *usecase.ReadArticle) http.HandlerFunc {
 			return
 		}
 
-		output := make([]presenter.Article, len(articles))
+		output := make([]presenter.ArticleResponse, len(articles))
 		for i, article := range articles {
-			output[i] = presenter.NewArticleFromDomain(article)
+			output[i] = presenter.NewArticleResponseFromDomain(article)
 		}
 
 		if err := json.NewEncoder(w).Encode(output); err != nil {
@@ -46,9 +46,9 @@ func ListToday(uc *usecase.ReadArticle) http.HandlerFunc {
 			return
 		}
 
-		output := make([]presenter.Article, len(articles))
+		output := make([]presenter.ArticleResponse, len(articles))
 		for i, article := range articles {
-			output[i] = presenter.NewArticleFromDomain(article)
+			output[i] = presenter.NewArticleResponseFromDomain(article)
 		}
 
 		if err := json.NewEncoder(w).Encode(output); err != nil {
