@@ -12,18 +12,18 @@ type (
 		GetArticlesFromDate(ctx context.Context, time time.Time) ([]rss.Article, error)
 	}
 
-	ReadUseCase struct {
+	ReadArticle struct {
 		store ArticlesStore
 	}
 )
 
-func NewRead(store ArticlesStore) *ReadUseCase {
-	return &ReadUseCase{
+func NewRead(store ArticlesStore) *ReadArticle {
+	return &ReadArticle{
 		store: store,
 	}
 }
 
-func (uc ReadUseCase) Execute(ctx context.Context, date time.Time) ([]rss.Article, error) {
+func (uc ReadArticle) Execute(ctx context.Context, date time.Time) ([]rss.Article, error) {
 	articles, err := uc.store.GetArticlesFromDate(ctx, date)
 	if err != nil {
 		return nil, fmt.Errorf("while getting articles from database: %w", err)

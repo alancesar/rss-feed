@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func GetFromDate(uc *usecase.ReadUseCase) http.HandlerFunc {
+func GetFromDate(uc *usecase.ReadArticle) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rawDate := r.URL.Query().Get("date")
 		date, err := time.Parse(time.DateOnly, rawDate)
@@ -38,7 +38,7 @@ func GetFromDate(uc *usecase.ReadUseCase) http.HandlerFunc {
 	}
 }
 
-func ListToday(uc *usecase.ReadUseCase) http.HandlerFunc {
+func ListToday(uc *usecase.ReadArticle) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		articles, err := uc.Execute(r.Context(), time.Now())
 		if err != nil {
