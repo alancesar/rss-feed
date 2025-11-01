@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	ErrSourceAlreadyExists = errors.New("source already exists")
+	ErrFeedAlreadyExists = errors.New("feed already exists")
 )
 
 type (
@@ -20,35 +20,35 @@ type (
 	FeedFetcher interface {
 		Fetch(context.Context, string) (rss.Feed, error)
 	}
-	AddSource struct {
+	AddFeed struct {
 		store   FeedStore
 		fetcher FeedFetcher
 	}
 )
 
-func NewAddSource(store FeedStore, fetcher FeedFetcher) *AddSource {
-	return &AddSource{
+func NewAddFeed(store FeedStore, fetcher FeedFetcher) *AddFeed {
+	return &AddFeed{
 		store:   store,
 		fetcher: fetcher,
 	}
 }
 
-func (uc AddSource) Execute(ctx context.Context, url string) error {
+func (uc AddFeed) Execute(ctx context.Context, url string) error {
 	_, exists, err := uc.store.GetFeedByURL(ctx, url)
 	if err != nil {
-		return fmt.Errorf("failed retrieve source from database: %w", err)
+		return fmt.Errorf("failed retrieve feed from database: %w", err)
 	}
 
 	if exists {
-		return fmt.Errorf("%w: %s", ErrSourceAlreadyExists, url)
+		return fmt.Errorf("%w: %s", ErrFeedAlreadyExists, url)
 	}
 
-	source, err := uc.fetcher.Fetch(ctx, url)
+	feed, err := uc.fetcher.Fetch(ctx, url)
 	if err != nil {
 		return err
 	}
 
-	if err := uc.store.SaveFeed(ctx, source); err != nil {
+	if err := uc.store.SaveFeed(ctx, feed); err != nil {
 		return err
 	}
 

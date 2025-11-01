@@ -23,7 +23,7 @@ func main() {
 	}
 
 	sqliteDatabase := database.NewGorm(db)
-	addSourceUseCase := usecase.NewAddSource(sqliteDatabase, feed.NewGoFeed())
+	addSourceUseCase := usecase.NewAddFeed(sqliteDatabase, feed.NewGoFeed())
 
 	sources := os.Args[1:]
 	for _, source := range sources {
