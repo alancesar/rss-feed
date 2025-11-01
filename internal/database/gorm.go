@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"errors"
 	"rss-summary/internal/database/model"
 	"rss-summary/pkg/rss"
 	"time"
@@ -23,26 +22,11 @@ func NewGorm(db *gorm.DB) *Gorm {
 
 func (g Gorm) SaveFeed(ctx context.Context, feed rss.Feed) error {
 	m := model.NewFeedFromDomain(feed)
-	if err := g.db.WithContext(ctx).Create(&m).Error; err != nil {
+	if err := g.db.WithContext(ctx).Save(&m).Error; err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (g Gorm) GetFeedByURL(ctx context.Context, url string) (rss.Feed, bool, error) {
-	m := model.Feed{}
-	if err := g.db.WithContext(ctx).
-		Where("url = ?", url).
-		First(&m).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return rss.Feed{}, false, nil
-		}
-
-		return rss.Feed{}, false, err
-	}
-
-	return m.ToDomain(), true, nil
 }
 
 func (g Gorm) GetArticlesFromDate(ctx context.Context, date time.Time) ([]rss.Article, error) {
