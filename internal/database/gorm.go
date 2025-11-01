@@ -30,7 +30,7 @@ func (g Gorm) SaveFeed(ctx context.Context, feed rss.Feed) error {
 	return nil
 }
 
-func (g Gorm) GetSource(ctx context.Context, url string) (rss.Feed, bool, error) {
+func (g Gorm) GetFeedByURL(ctx context.Context, url string) (rss.Feed, bool, error) {
 	m := model.Feed{}
 	if err := g.db.WithContext(ctx).
 		Where("url = ?", url).
