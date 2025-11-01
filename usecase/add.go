@@ -23,15 +23,15 @@ func NewAddFeed(store FeedStore, fetcher FeedFetcher) *AddFeed {
 	}
 }
 
-func (uc AddFeed) Execute(ctx context.Context, url string) error {
+func (uc AddFeed) Execute(ctx context.Context, url string) (rss.Feed, error) {
 	feed, err := uc.fetcher.Fetch(ctx, url)
 	if err != nil {
-		return err
+		return rss.Feed{}, err
 	}
 
 	if err := uc.store.SaveFeed(ctx, feed); err != nil {
-		return err
+		return rss.Feed{}, err
 	}
 
-	return nil
+	return feed, nil
 }
