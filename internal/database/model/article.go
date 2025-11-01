@@ -7,7 +7,7 @@ import (
 
 type (
 	Feed struct {
-		ID        uint `gorm:"primarykey;autoIncrement"`
+		ID        string `gorm:"primarykey"`
 		Name      string
 		URL       string
 		Articles  []Article
@@ -15,8 +15,8 @@ type (
 	}
 
 	Article struct {
-		ID          uint `gorm:"primarykey;autoIncrement"`
-		FeedID      uint
+		ID          string `gorm:"primarykey"`
+		FeedID      string
 		Source      string
 		Title       string
 		URL         string `gorm:"uniqueIndex"`

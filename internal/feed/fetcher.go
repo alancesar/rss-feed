@@ -45,9 +45,5 @@ func (r GoFeed) Fetch(_ context.Context, url string) (rss.Feed, error) {
 		articles[i] = article
 	}
 
-	return rss.Feed{
-		Name:     feed.Title,
-		URL:      feed.Link,
-		Articles: articles,
-	}, nil
+	return rss.NewFeed(feed.Title, url, articles), nil
 }

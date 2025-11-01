@@ -1,6 +1,8 @@
 package rss
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"html"
 	"regexp"
@@ -16,20 +18,29 @@ type (
 	DateTime time.Time
 
 	Feed struct {
-		ID       uint
+		ID       string
 		Name     string
 		URL      string
 		Articles []Article
 	}
 
 	Article struct {
-		ID          uint
+		ID          string
 		Source      string
 		Title       string
 		URL         string
 		PublishedAt DateTime
 	}
 )
+
+func NewFeed(name, url string, articles []Article) Feed {
+	return Feed{
+		ID:       hashFromString(url),
+		Name:     name,
+		URL:      url,
+		Articles: articles,
+	}
+}
 
 func NewArticle(source, title, url, publishedAt string) (Article, error) {
 	dateTime, err := NewDateTime(publishedAt)
@@ -38,6 +49,7 @@ func NewArticle(source, title, url, publishedAt string) (Article, error) {
 	}
 
 	return Article{
+		ID:          hashFromString(url),
 		Source:      source,
 		Title:       title,
 		URL:         url,
@@ -69,4 +81,9 @@ func NewDateTime(raw string) (DateTime, error) {
 	}
 
 	return DateTime(dt), nil
+}
+
+func hashFromString(input string) string {
+	hash := sha256.Sum256([]byte(input))
+	return hex.EncodeToString(hash[:])
 }
