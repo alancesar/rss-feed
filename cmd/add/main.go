@@ -27,7 +27,7 @@ func main() {
 
 	sources := os.Args[1:]
 	for _, source := range sources {
-		if err := addSourceUseCase.Execute(ctx, source); err != nil {
+		if _, err := addSourceUseCase.Execute(ctx, source); err != nil {
 			log.Println(err)
 		}
 	}
