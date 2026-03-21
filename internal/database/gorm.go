@@ -43,3 +43,17 @@ func (g Gorm) GetArticlesFromDate(ctx context.Context, date time.Time) ([]rss.Ar
 	}
 	return result, nil
 }
+
+func (g Gorm) GetAllFeedURLs(ctx context.Context) ([]string, error) {
+	var feeds []model.Feed
+	if err := g.db.WithContext(ctx).Find(&feeds).Error; err != nil {
+		return nil, err
+	}
+
+	urls := make([]string, len(feeds))
+	for i, feed := range feeds {
+		urls[i] = feed.URL
+	}
+
+	return urls, nil
+}
