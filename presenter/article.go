@@ -11,7 +11,7 @@ type (
 		Source      string    `json:"source"`
 		Title       string    `json:"title"`
 		URL         string    `json:"url"`
-		PublishedAt time.Time `json:"published_at"`
+		PublishedAt time.Time `json:"published_at" example:"2006-01-02T15:04:05-07:00" format:"date-time"` // RFC3339 timestamp with timezone offset
 	}
 
 	ArticleListResponse struct {

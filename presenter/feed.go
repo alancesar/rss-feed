@@ -7,7 +7,7 @@ import (
 
 type (
 	AddFeedRequest struct {
-		URL string `json:"url"`
+		URL string `json:"url" example:"https://example.com/rss/feed"` // RSS feed URL
 	}
 
 	AddFeedResponse struct {

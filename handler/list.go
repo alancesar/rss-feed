@@ -15,7 +15,7 @@ import (
 //	@Description	Returns all articles published on the given date
 //	@Tags			articles
 //	@Produce		json
-//	@Param			date	query		string						true	"Date in YYYY-MM-DD format"	example(2024-01-15)
+//	@Param			date	query		string						true	"Date in YYYY-MM-DD format"	Format(date)	example(2025-10-27)
 //	@Success		200		{object}	presenter.ArticleListResponse
 //	@Failure		400		{string}	string	"invalid date param. it must be in YYYY-MM-DD pattern"
 //	@Failure		500		{string}	string	"internal server error"
