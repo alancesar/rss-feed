@@ -19,7 +19,6 @@ type (
 		FeedID      string
 		Source      string
 		Title       string
-		Image       string
 		URL         string `gorm:"uniqueIndex"`
 		CreatedAt   time.Time
 		PublishedAt time.Time `gorm:"index"`
@@ -47,7 +46,6 @@ func NewArticleFromDomain(article rss.Article, feed rss.Feed) Article {
 		Source:      feed.Name,
 		Title:       article.Title,
 		URL:         article.URL,
-		Image:       article.Image,
 		PublishedAt: time.Time(article.PublishedAt),
 	}
 }
@@ -66,7 +64,6 @@ func (a Article) ToDomain() rss.Article {
 		Source:      a.Source,
 		Title:       a.Title,
 		URL:         a.URL,
-		Image:       a.Image,
 		PublishedAt: rss.DateTime(a.PublishedAt),
 	}
 }

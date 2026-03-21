@@ -28,7 +28,7 @@ type (
 		ID          string
 		Source      string
 		Title       string
-		Image       string
+		Image       string // source URL from RSS feed, not persisted to DB
 		URL         string
 		PublishedAt DateTime
 	}
@@ -57,6 +57,10 @@ func NewArticle(source, title, url, image, publishedAt string) (Article, error) 
 		URL:         url,
 		PublishedAt: dateTime,
 	}, nil
+}
+
+func (a Article) ImagePath() string {
+	return fmt.Sprintf("images/%s.jpg", a.ID)
 }
 
 func (a Article) ToMarkdown() string {
