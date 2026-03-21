@@ -1,3 +1,13 @@
+// Package main RSS Summary API.
+//
+//	@title			RSS Summary API
+//	@version		1.0
+//	@description	Aggregates articles from RSS feeds and exposes them via a REST API.
+//
+//	@host		localhost:3000
+//	@BasePath	/
+//
+//go:generate swag init -g cmd/api/main.go -o docs
 package main
 
 import (
@@ -8,9 +18,12 @@ import (
 	"rss-summary/internal/feed"
 	"rss-summary/usecase"
 
+	_ "rss-summary/docs"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -40,6 +53,8 @@ func main() {
 	r.Route("/feeds", func(r chi.Router) {
 		r.Post("/", handler.AddFeed(addUseCase))
 	})
+
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	if err := http.ListenAndServe(":3000", r); err != nil {
 		log.Fatalln(err)
