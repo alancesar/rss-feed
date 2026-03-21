@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 	"rss-summary/internal/database"
 	"rss-summary/internal/feed"
 	"rss-summary/usecase"
@@ -23,12 +22,9 @@ func main() {
 	}
 
 	sqliteDatabase := database.NewGorm(db)
-	addSourceUseCase := usecase.NewAddFeed(sqliteDatabase, feed.NewGoFeed())
+	addSourceUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed())
 
-	sources := os.Args[1:]
-	for _, source := range sources {
-		if _, err := addSourceUseCase.Execute(ctx, source); err != nil {
-			log.Println(err)
-		}
+	if err := addSourceUseCase.Execute(ctx); err != nil {
+		log.Println(err)
 	}
 }

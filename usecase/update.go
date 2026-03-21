@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 )
 
 type (
@@ -16,6 +17,13 @@ type (
 	}
 )
 
+func NewUpdateFeeds(store FeedsStore, fetcher FeedFetcher) *UpdateFeeds {
+	return &UpdateFeeds{
+		store:   store,
+		fetcher: fetcher,
+	}
+}
+
 func (f UpdateFeeds) Execute(ctx context.Context) error {
 	urls, err := f.store.GetAllFeedURLs(ctx)
 	if err != nil {
@@ -23,6 +31,7 @@ func (f UpdateFeeds) Execute(ctx context.Context) error {
 	}
 
 	for _, url := range urls {
+		fmt.Println("fetching", url)
 		feed, err := f.fetcher.Fetch(ctx, url)
 		if err != nil {
 			return err
