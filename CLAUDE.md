@@ -47,6 +47,15 @@ Two tables: `feeds` and `articles` (with `published_at` index for date queries).
 - `UpdateFeeds` — iterates all stored feed URLs and re-fetches them
 - `ReadArticle` — queries articles by date
 
+## Common Commands
+
+```bash
+make docs          # regenerate Swagger docs (swag init)
+make build         # compile binaries to ./bin/api and ./bin/update
+make run           # run the API server via go run
+go generate ./...  # same as make docs — regenerate Swagger docs via go:generate directive
+```
+
 ## Design Notes
 
 - Dependency injection via constructor functions (`NewAddFeed`, `NewRead`, etc.)
