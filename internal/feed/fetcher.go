@@ -37,7 +37,13 @@ func (r GoFeed) Fetch(_ context.Context, url string) (rss.Feed, error) {
 
 	articles := make([]rss.Article, len(feed.Items))
 	for i, item := range feed.Items {
-		article, err := rss.NewArticle(feed.Title, item.Title, item.Link, item.Published)
+		img := item.Image
+		imageURL := ""
+		if img != nil {
+			imageURL = img.URL
+		}
+
+		article, err := rss.NewArticle(feed.Title, item.Title, item.Link, imageURL, item.Published)
 		if err != nil {
 			return rss.Feed{}, err
 		}

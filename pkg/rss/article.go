@@ -28,6 +28,7 @@ type (
 		ID          string
 		Source      string
 		Title       string
+		Image       string
 		URL         string
 		PublishedAt DateTime
 	}
@@ -42,7 +43,7 @@ func NewFeed(name, url string, articles []Article) Feed {
 	}
 }
 
-func NewArticle(source, title, url, publishedAt string) (Article, error) {
+func NewArticle(source, title, url, image, publishedAt string) (Article, error) {
 	dateTime, err := NewDateTime(publishedAt)
 	if err != nil {
 		return Article{}, fmt.Errorf("could not parse published date: %v", err)
@@ -52,6 +53,7 @@ func NewArticle(source, title, url, publishedAt string) (Article, error) {
 		ID:          hashFromString(url),
 		Source:      source,
 		Title:       title,
+		Image:       image,
 		URL:         url,
 		PublishedAt: dateTime,
 	}, nil

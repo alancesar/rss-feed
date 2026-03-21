@@ -11,6 +11,7 @@ type (
 		Source      string    `json:"source"`
 		Title       string    `json:"title"`
 		URL         string    `json:"url"`
+		Image       string    `json:"image"`
 		PublishedAt time.Time `json:"published_at" example:"2006-01-02T15:04:05-07:00" format:"date-time"` // RFC3339 timestamp with timezone offset
 	}
 
@@ -39,6 +40,7 @@ func NewArticleResponseFromDomain(article rss.Article) ArticleResponse {
 		Source:      article.Source,
 		Title:       article.Title,
 		URL:         article.URL,
+		Image:       article.Image,
 		PublishedAt: time.Time(article.PublishedAt),
 	}
 }
