@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"rss-summary/presenter"
 	"rss-summary/usecase"
+
+	"github.com/go-chi/render"
 )
 
 func AddFeed(uc *usecase.AddFeed) http.HandlerFunc {
@@ -21,13 +23,10 @@ func AddFeed(uc *usecase.AddFeed) http.HandlerFunc {
 			return
 		}
 
-		response := presenter.NewAddFeedResponseFromDomain(feed)
-		if err := json.NewEncoder(w).Encode(response); err != nil {
+		render.Status(r, http.StatusCreated)
+		if err := render.Render(w, r, presenter.NewAddFeedResponseFromDomain(feed)); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
 	}
 }

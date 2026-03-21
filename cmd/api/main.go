@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/render"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -25,6 +26,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	sqliteDatabase := database.NewGorm(db)
 	readUseCase := usecase.NewRead(sqliteDatabase)

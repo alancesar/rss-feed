@@ -1,6 +1,9 @@
 package presenter
 
-import "rss-summary/pkg/rss"
+import (
+	"net/http"
+	"rss-summary/pkg/rss"
+)
 
 type (
 	AddFeedRequest struct {
@@ -13,6 +16,10 @@ type (
 		Articles []ArticleResponse `json:"articles"`
 	}
 )
+
+func (a AddFeedResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
+	return nil
+}
 
 func NewAddFeedResponseFromDomain(feed rss.Feed) AddFeedResponse {
 	articles := make([]ArticleResponse, len(feed.Articles))

@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 	"rss-summary/presenter"
 	"rss-summary/usecase"
 	"time"
+
+	"github.com/go-chi/render"
 )
 
 func GetFromDate(uc *usecase.ReadArticle) http.HandlerFunc {
@@ -23,18 +24,11 @@ func GetFromDate(uc *usecase.ReadArticle) http.HandlerFunc {
 			return
 		}
 
-		output := make([]presenter.ArticleResponse, len(articles))
-		for i, article := range articles {
-			output[i] = presenter.NewArticleResponseFromDomain(article)
-		}
-
-		if err := json.NewEncoder(w).Encode(output); err != nil {
+		render.Status(r, http.StatusOK)
+		if err := render.Render(w, r, presenter.NewArticleListResponse(articles)); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -46,17 +40,10 @@ func ListToday(uc *usecase.ReadArticle) http.HandlerFunc {
 			return
 		}
 
-		output := make([]presenter.ArticleResponse, len(articles))
-		for i, article := range articles {
-			output[i] = presenter.NewArticleResponseFromDomain(article)
-		}
-
-		if err := json.NewEncoder(w).Encode(output); err != nil {
+		render.Status(r, http.StatusOK)
+		if err := render.Render(w, r, presenter.NewArticleListResponse(articles)); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
 	}
 }
