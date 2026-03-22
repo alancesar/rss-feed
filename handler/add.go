@@ -3,8 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"rss-summary/presenter"
-	"rss-summary/usecase"
+	"rss-feed/presenter"
+	"rss-feed/usecase"
 
 	"github.com/go-chi/render"
 )

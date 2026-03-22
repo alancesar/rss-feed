@@ -3,7 +3,7 @@ package queue
 import (
 	"context"
 	"encoding/json"
-	"rss-summary/pkg/event"
+	"rss-feed/pkg/event"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )

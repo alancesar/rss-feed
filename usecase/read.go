@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"rss-summary/pkg/rss"
+	"rss-feed/pkg/rss"
 	"time"
 )
 

@@ -2,7 +2,7 @@ package presenter
 
 import (
 	"net/http"
-	"rss-summary/pkg/rss"
+	"rss-feed/pkg/rss"
 	"time"
 )
 

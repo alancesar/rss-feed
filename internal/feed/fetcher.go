@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"rss-summary/pkg/event"
+	"rss-feed/pkg/event"
 
 	"github.com/mmcdole/gofeed"
 )

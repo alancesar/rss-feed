@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
-	"rss-summary/pkg/event"
-	"rss-summary/pkg/rss"
+	"rss-feed/pkg/event"
+	"rss-feed/pkg/rss"
 )
 
 type (

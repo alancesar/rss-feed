@@ -2,8 +2,8 @@ package database
 
 import (
 	"context"
-	"rss-summary/internal/database/model"
-	"rss-summary/pkg/rss"
+	"rss-feed/internal/database/model"
+	"rss-feed/pkg/rss"
 	"time"
 
 	"gorm.io/gorm"

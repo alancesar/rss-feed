@@ -1,4 +1,4 @@
-module rss-summary
+module rss-feed
 
 go 1.25
 

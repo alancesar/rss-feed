@@ -2,8 +2,8 @@ package handler
 
 import (
 	"net/http"
-	"rss-summary/presenter"
-	"rss-summary/usecase"
+	"rss-feed/presenter"
+	"rss-feed/usecase"
 	"time"
 
 	"github.com/go-chi/render"

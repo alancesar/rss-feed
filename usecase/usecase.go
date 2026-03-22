@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"context"
-	"rss-summary/pkg/event"
+	"rss-feed/pkg/event"
 )
 
 type (
