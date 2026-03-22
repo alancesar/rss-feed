@@ -30,6 +30,9 @@ func main() {
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion("us-east-1"),
 	)
+	if err != nil {
+		log.Fatalln("while loading AWS config:", err)
+	}
 
 	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String("https://s3.alancesar.org")
