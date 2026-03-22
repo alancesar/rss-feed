@@ -4,7 +4,7 @@
 //	@version		1.0
 //	@description	Aggregates articles from RSS feeds and exposes them via a REST API.
 //
-//	@host		localhost:3000
+//	@host		localhost:8080
 //	@BasePath	/
 //
 //go:generate swag init -g cmd/api/main.go -o docs
@@ -102,6 +102,9 @@ func main() {
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 	log.Info().Str("port", port).Msg("server listening")
 
 	srv := &http.Server{

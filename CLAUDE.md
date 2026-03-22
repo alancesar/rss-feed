@@ -16,7 +16,7 @@ internal/database → GORM + SQLite persistence
 internal/feed     → RSS feed fetcher (gofeed) — emits event.Feed
 internal/queue    → RabbitMQ publisher and consumer
 internal/storage  → S3-compatible object storage (upload + presign)
-cmd/api/          → REST API server (port 3000)
+cmd/api/          → REST API server (default port 8080, overridable via PORT env)
 cmd/update/       → CLI tool: reads all feed URLs from DB and triggers re-fetch
 cmd/worker/       → Long-running worker: consumes RabbitMQ events and processes feeds/images
 ```
