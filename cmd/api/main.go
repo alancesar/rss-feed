@@ -36,7 +36,7 @@ import (
 )
 
 func main() {
-	db, err := gorm.Open(sqlite.Open("rss.sqlite"), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
@@ -44,12 +44,12 @@ func main() {
 	}
 	sqliteDatabase := database.NewGorm(db)
 
-	s3Storage, err := storage.NewS3("https://s3.alancesar.org", "us-east-1", os.Getenv("AWS_BUCKET"))
+	s3Storage, err := storage.NewS3(os.Getenv("S3_ENDPOINT"), os.Getenv("S3_REGION"), os.Getenv("AWS_BUCKET"))
 	if err != nil {
 		log.Fatalln("while creating s3 client:", err)
 	}
 
-	dial, err := amqp.Dial("amqp://rabbitmq:Pa55w0rd@amqp.alancesar.org")
+	dial, err := amqp.Dial(os.Getenv("AMQP_URL"))
 	if err != nil {
 		log.Fatalln("while connecting to rabbitmq:", err)
 	}
@@ -87,7 +87,7 @@ func main() {
 
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
-	if err := http.ListenAndServe(":3000", r); err != nil {
+	if err := http.ListenAndServe(":"+os.Getenv("PORT"), r); err != nil {
 		log.Fatalln(err)
 	}
 }

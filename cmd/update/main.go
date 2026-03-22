@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
+	"net/url"
+	"os"
 	"rss-summary/internal/database"
 	"rss-summary/internal/feed"
 	"rss-summary/internal/queue"
@@ -18,7 +20,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	db, err := gorm.Open(sqlite.Open("rss.sqlite"), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
@@ -27,11 +29,17 @@ func main() {
 
 	sqliteDatabase := database.NewGorm(db)
 
-	cfg := &tls.Config{
-		ServerName: "amqp.alancesar.org",
+	amqpURL := os.Getenv("AMQP_URL")
+	u, err := url.Parse(amqpURL)
+	if err != nil {
+		log.Fatalln("while parsing AMQP_URL:", err)
 	}
 
-	conn, err := amqp.DialTLS("amqps://rabbitmq:Pa55w0rd@amqp.alancesar.org", cfg)
+	cfg := &tls.Config{
+		ServerName: u.Hostname(),
+	}
+
+	conn, err := amqp.DialTLS(amqpURL, cfg)
 	if err != nil {
 		log.Fatalln("while connecting to rabbitmq:", err)
 	}

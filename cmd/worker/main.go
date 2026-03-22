@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"rss-summary/internal/database"
 	"rss-summary/internal/queue"
@@ -22,7 +23,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	db, err := gorm.Open(sqlite.Open("rss.sqlite"), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
@@ -30,16 +31,22 @@ func main() {
 	}
 	sqliteDatabase := database.NewGorm(db)
 
-	s3Storage, err := storage.NewS3("https://s3.alancesar.org", "us-east-1", os.Getenv("AWS_BUCKET"))
+	s3Storage, err := storage.NewS3(os.Getenv("S3_ENDPOINT"), os.Getenv("S3_REGION"), os.Getenv("AWS_BUCKET"))
 	if err != nil {
 		log.Fatalln("while creating s3 client:", err)
 	}
 
-	cfg := &tls.Config{
-		ServerName: "amqp.alancesar.org",
+	amqpURL := os.Getenv("AMQP_URL")
+	u, err := url.Parse(amqpURL)
+	if err != nil {
+		log.Fatalln("while parsing AMQP_URL:", err)
 	}
 
-	conn, err := amqp.DialTLS("amqps://rabbitmq:Pa55w0rd@amqp.alancesar.org", cfg)
+	cfg := &tls.Config{
+		ServerName: u.Hostname(),
+	}
+
+	conn, err := amqp.DialTLS(amqpURL, cfg)
 	if err != nil {
 		log.Fatalln("while connecting to rabbitmq:", err)
 	}
