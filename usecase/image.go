@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"rss-feed/pkg/event"
 	"rss-feed/pkg/rss"
+
+	"github.com/rs/zerolog"
 )
 
 type (
@@ -36,6 +38,9 @@ func NewConsumeImage(client *http.Client, storage FileStorage, db ImageStore) *C
 }
 
 func (uc ConsumeImage) Execute(ctx context.Context, e event.Image) error {
+	log := zerolog.Ctx(ctx)
+
+	log.Info().Str("url", e.URL).Str("article_id", e.ArticleID).Msg("downloading image")
 	resp, err := uc.client.Get(e.URL)
 	if err != nil {
 		return err
@@ -55,11 +60,14 @@ func (uc ConsumeImage) Execute(ctx context.Context, e event.Image) error {
 	}
 	ext := filepath.Ext(filepath.Base(u.Path))
 	path := fmt.Sprintf("images/original/%s%s", e.ArticleID, ext)
+
+	log.Info().Str("path", path).Msg("uploading image to s3")
 	if err := uc.storage.Create(ctx, path, resp.Body); err != nil {
 		return err
 	}
 
 	img := rss.NewImage(e.ArticleID, path, rss.OriginalImageType)
+	log.Info().Str("article_id", e.ArticleID).Str("path", path).Msg("saving image to database")
 	if err := uc.db.SaveImage(ctx, img); err != nil {
 		return err
 	}

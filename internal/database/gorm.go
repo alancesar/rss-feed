@@ -6,6 +6,7 @@ import (
 	"rss-feed/pkg/rss"
 	"time"
 
+	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
@@ -21,6 +22,7 @@ func NewGorm(db *gorm.DB) *Gorm {
 }
 
 func (g Gorm) SaveFeed(ctx context.Context, feed rss.Feed) error {
+	zerolog.Ctx(ctx).Info().Str("feed", feed.Name).Int("articles", len(feed.Articles)).Msg("saving feed to database")
 	m := model.NewFeedFromDomain(feed)
 	if err := g.db.WithContext(ctx).Save(&m).Error; err != nil {
 		return err
@@ -56,10 +58,12 @@ func (g Gorm) GetAllFeedURLs(ctx context.Context) ([]string, error) {
 		urls[i] = feed.URL
 	}
 
+	zerolog.Ctx(ctx).Info().Int("count", len(urls)).Msg("retrieved feed URLs from database")
 	return urls, nil
 }
 
 func (g Gorm) SaveImage(ctx context.Context, img rss.Image) error {
+	zerolog.Ctx(ctx).Info().Str("article_id", img.ArticleID).Str("path", img.Path).Msg("saving image to database")
 	m := model.NewImageFromDomain(img)
 	if err := g.db.WithContext(ctx).Save(&m).Error; err != nil {
 		return err

@@ -2,8 +2,9 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	"rss-feed/pkg/rss"
+
+	"github.com/rs/zerolog"
 )
 
 type (
@@ -32,14 +33,15 @@ func (uc UpdateFeeds) Execute(ctx context.Context) error {
 		return err
 	}
 
+	log := zerolog.Ctx(ctx)
 	for _, url := range urls {
-		fmt.Println("fetching", url)
+		log.Info().Str("url", url).Msg("fetching feed")
 		f, err := uc.handler(ctx, url)
 		if err != nil {
 			return err
 		}
 
-		fmt.Println("fetched", f.Name, "from", url)
+		log.Info().Str("name", f.Name).Str("url", url).Msg("feed fetched")
 	}
 
 	return nil

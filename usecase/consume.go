@@ -4,6 +4,8 @@ import (
 	"context"
 	"rss-feed/pkg/event"
 	"rss-feed/pkg/rss"
+
+	"github.com/rs/zerolog"
 )
 
 type (
@@ -25,6 +27,8 @@ func NewConsumeFeed(store FeedStore, publisher Publisher) *ConsumeFeed {
 }
 
 func (uc ConsumeFeed) Execute(ctx context.Context, e event.Feed) error {
+	log := zerolog.Ctx(ctx)
+
 	articles := make([]rss.Article, len(e.Articles))
 	for i, article := range e.Articles {
 		articles[i] = rss.Article{
@@ -42,6 +46,7 @@ func (uc ConsumeFeed) Execute(ctx context.Context, e event.Feed) error {
 		Articles: articles,
 	}
 
+	log.Info().Str("feed", feed.Name).Int("articles", len(articles)).Msg("saving feed")
 	if err := uc.store.SaveFeed(ctx, feed); err != nil {
 		return err
 	}
@@ -51,6 +56,7 @@ func (uc ConsumeFeed) Execute(ctx context.Context, e event.Feed) error {
 			continue
 		}
 
+		log.Info().Str("article_id", article.ArticleID).Msg("publishing image event")
 		if err := uc.publisher.Publish(ctx, "feed.article.image.found", event.Event{
 			Payload: article.Image,
 		}); err != nil {

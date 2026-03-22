@@ -11,8 +11,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"log"
+	"net"
 	"net/http"
 	"os"
 	"rss-feed/handler"
@@ -29,6 +30,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/rs/zerolog"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -36,35 +38,47 @@ import (
 )
 
 func main() {
+	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
+
 	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
-		log.Fatalln("while opening sqlite database:", err)
+		log.Fatal().Err(err).Msg("opening sqlite database")
 	}
 	sqliteDatabase := database.NewGorm(db)
 
 	s3Storage, err := storage.NewS3(os.Getenv("S3_ENDPOINT"), os.Getenv("S3_REGION"), os.Getenv("AWS_BUCKET"))
 	if err != nil {
-		log.Fatalln("while creating s3 client:", err)
+		log.Fatal().Err(err).Msg("creating s3 client")
 	}
 
 	dial, err := amqp.Dial(os.Getenv("AMQP_URL"))
 	if err != nil {
-		log.Fatalln("while connecting to rabbitmq:", err)
+		log.Fatal().Err(err).Msg("connecting to rabbitmq")
 	}
 
 	rabbitMQ := queue.NewRabbitMQ(dial)
 	publisher, err := rabbitMQ.NewPublisher("rss")
 	if err != nil {
-		log.Fatalln("while creating rabbitmq publisher:", err)
+		log.Fatal().Err(err).Msg("creating rabbitmq publisher")
 	}
 
 	readArticlesUseCase := usecase.NewReadArticles(sqliteDatabase, s3Storage)
 	publishFeedUseCase := usecase.NewPublishFeed(publisher, feed.NewGoFeed())
 
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			next.ServeHTTP(ww, r)
+			zerolog.Ctx(r.Context()).Info().
+				Str("method", r.Method).
+				Str("path", r.URL.Path).
+				Int("status", ww.Status()).
+				Msg("request")
+		})
+	})
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"http://localhost*"},
 	}))
@@ -87,7 +101,18 @@ func main() {
 
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
-	if err := http.ListenAndServe(":"+os.Getenv("PORT"), r); err != nil {
-		log.Fatalln(err)
+	port := os.Getenv("PORT")
+	log.Info().Str("port", port).Msg("server listening")
+
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: r,
+		BaseContext: func(_ net.Listener) context.Context {
+			return log.WithContext(context.Background())
+		},
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
+		log.Fatal().Err(err).Msg("server stopped")
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"rss-feed/pkg/event"
 	"rss-feed/pkg/rss"
+
+	"github.com/rs/zerolog"
 )
 
 type (
@@ -25,11 +27,15 @@ func NewPublishFeed(publisher Publisher, fetcher FeedFetcher) *PublishFeed {
 }
 
 func (uc PublishFeed) Execute(ctx context.Context, url string) (rss.Feed, error) {
+	log := zerolog.Ctx(ctx)
+
+	log.Info().Str("url", url).Msg("fetching feed")
 	feed, err := uc.fetcher.Fetch(ctx, url)
 	if err != nil {
 		return rss.Feed{}, err
 	}
 
+	log.Info().Str("feed", feed.Name).Int("articles", len(feed.Articles)).Msg("publishing feed.found event")
 	if err := uc.publisher.Publish(ctx, "feed.found", event.Event{
 		Payload: feed,
 	}); err != nil {

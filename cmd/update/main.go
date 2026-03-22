@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"log"
 	"net/url"
 	"os"
 	"rss-feed/internal/database"
@@ -12,19 +11,21 @@ import (
 	"rss-feed/usecase"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/rs/zerolog"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 func main() {
-	ctx := context.Background()
+	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
+	ctx := log.WithContext(context.Background())
 
 	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
-		log.Fatalln("while opening sqlite database:", err)
+		log.Fatal().Err(err).Msg("opening sqlite database")
 	}
 
 	sqliteDatabase := database.NewGorm(db)
@@ -32,7 +33,7 @@ func main() {
 	amqpURL := os.Getenv("AMQP_URL")
 	u, err := url.Parse(amqpURL)
 	if err != nil {
-		log.Fatalln("while parsing AMQP_URL:", err)
+		log.Fatal().Err(err).Msg("parsing AMQP_URL")
 	}
 
 	cfg := &tls.Config{
@@ -41,7 +42,7 @@ func main() {
 
 	conn, err := amqp.DialTLS(amqpURL, cfg)
 	if err != nil {
-		log.Fatalln("while connecting to rabbitmq:", err)
+		log.Fatal().Err(err).Msg("connecting to rabbitmq")
 	}
 
 	defer func() {
@@ -51,12 +52,12 @@ func main() {
 	rabbitMQ := queue.NewRabbitMQ(conn)
 	publisher, err := rabbitMQ.NewPublisher("rss")
 	if err != nil {
-		log.Fatalln("while creating rabbitmq publisher:", err)
+		log.Fatal().Err(err).Msg("creating rabbitmq publisher")
 	}
 
 	feedPublisherUseCase := usecase.NewPublishFeed(publisher, feed.NewGoFeed())
 	updateFeedUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feedPublisherUseCase.Execute)
 	if err := updateFeedUseCase.Execute(ctx); err != nil {
-		log.Println(err)
+		log.Error().Err(err).Msg("updating feeds")
 	}
 }
