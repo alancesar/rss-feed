@@ -55,7 +55,7 @@ func NewArticleFromDomain(article rss.Article, feed rss.Feed) Article {
 		Source:      feed.Name,
 		Title:       article.Title,
 		URL:         article.URL,
-		PublishedAt: time.Time(article.PublishedAt),
+		PublishedAt: article.PublishedAt,
 	}
 }
 
@@ -88,7 +88,7 @@ func (a Article) ToDomain() rss.Article {
 		Title:       a.Title,
 		URL:         a.URL,
 		Images:      images,
-		PublishedAt: rss.DateTime(a.PublishedAt),
+		PublishedAt: a.PublishedAt,
 	}
 }
 

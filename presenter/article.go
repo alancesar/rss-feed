@@ -58,6 +58,6 @@ func NewArticleResponseFromDomain(article rss.Article) ArticleResponse {
 		Title:       article.Title,
 		URL:         article.URL,
 		Images:      images,
-		PublishedAt: time.Time(article.PublishedAt),
+		PublishedAt: article.PublishedAt,
 	}
 }

@@ -41,7 +41,7 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (rss.Feed, error) {
 
 	articles := make([]rss.Article, len(feed.Items))
 	for i, item := range feed.Items {
-		article, err := rss.NewArticle(feed.Title, item.Title, item.Link, item.Published)
+		article, err := rss.NewArticle(feed.Title, item.Title, item.Link, item.PublishedParsed)
 		if err != nil {
 			return rss.Feed{}, err
 		}
