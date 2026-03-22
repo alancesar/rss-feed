@@ -73,6 +73,10 @@ func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.E
 }
 
 func (c RabbitMQConsumer) Consume(ctx context.Context, handler Handler) error {
+	defer func() {
+		_ = c.channel.Close()
+	}()
+
 	deliveries, err := c.channel.ConsumeWithContext(ctx, c.queue, "", false, false, false, false, nil)
 	if err != nil {
 		return err
