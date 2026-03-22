@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"rss-summary/pkg/event"
 	"rss-summary/pkg/rss"
 )
 
@@ -15,33 +16,27 @@ type (
 		Create(ctx context.Context, path string, img io.Reader) error
 	}
 
-	ImageDatabase interface {
+	ImageStore interface {
 		SaveImage(ctx context.Context, Image rss.Image) error
 	}
 
-	AddImageRequest struct {
-		ArticleID string `json:"article_id"`
-		SourceURL string `json:"source_url"`
-	}
-
-	AddImages struct {
+	ConsumeImage struct {
 		client  *http.Client
 		storage FileStorage
-		db      ImageDatabase
+		db      ImageStore
 	}
 )
 
-func NewAddImages(client *http.Client, storage FileStorage, db ImageDatabase) *AddImages {
-	return &AddImages{
+func NewConsumeImage(client *http.Client, storage FileStorage, db ImageStore) *ConsumeImage {
+	return &ConsumeImage{
 		client:  client,
 		storage: storage,
 		db:      db,
 	}
 }
 
-func (uc AddImages) Execute(ctx context.Context, req AddImageRequest) error {
-	fmt.Println("Adding image for article", req.ArticleID, "from source", req.SourceURL)
-	resp, err := uc.client.Get(req.SourceURL)
+func (uc ConsumeImage) Execute(ctx context.Context, e event.Image) error {
+	resp, err := uc.client.Get(e.URL)
 	if err != nil {
 		return err
 	}
@@ -54,17 +49,17 @@ func (uc AddImages) Execute(ctx context.Context, req AddImageRequest) error {
 		_ = resp.Body.Close()
 	}()
 
-	u, err := url.Parse(req.SourceURL)
+	u, err := url.Parse(e.URL)
 	if err != nil {
 		return err
 	}
 	ext := filepath.Ext(filepath.Base(u.Path))
-	path := fmt.Sprintf("images/original/%s%s", req.ArticleID, ext)
+	path := fmt.Sprintf("images/original/%s%s", e.ArticleID, ext)
 	if err := uc.storage.Create(ctx, path, resp.Body); err != nil {
 		return err
 	}
 
-	img := rss.NewImage(req.ArticleID, path, rss.OriginalImageType)
+	img := rss.NewImage(e.ArticleID, path, rss.OriginalImageType)
 	if err := uc.db.SaveImage(ctx, img); err != nil {
 		return err
 	}

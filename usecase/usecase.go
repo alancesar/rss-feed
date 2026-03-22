@@ -2,11 +2,11 @@ package usecase
 
 import (
 	"context"
-	"rss-summary/pkg/rss"
+	"rss-summary/pkg/event"
 )
 
 type (
-	FeedFetcher interface {
-		Fetch(context.Context, string) (rss.Feed, error)
+	Publisher interface {
+		Publish(ctx context.Context, topic string, e event.Event) error
 	}
 )

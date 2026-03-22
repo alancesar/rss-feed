@@ -20,7 +20,7 @@ import (
 //	@Failure		400		{string}	string	"invalid date param. it must be in YYYY-MM-DD pattern"
 //	@Failure		500		{string}	string	"internal server error"
 //	@Router			/articles [get]
-func GetFromDate(uc *usecase.ReadArticle) http.HandlerFunc {
+func GetFromDate(uc *usecase.ReadArticles) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rawDate := r.URL.Query().Get("date")
 		date, err := time.Parse(time.DateOnly, rawDate)
@@ -52,7 +52,7 @@ func GetFromDate(uc *usecase.ReadArticle) http.HandlerFunc {
 //	@Success		200	{object}	presenter.ArticleListResponse
 //	@Failure		500	{string}	string	"internal server error"
 //	@Router			/articles/today [get]
-func ListToday(uc *usecase.ReadArticle) http.HandlerFunc {
+func ListToday(uc *usecase.ReadArticles) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		articles, err := uc.Execute(r.Context(), time.Now())
 		if err != nil {

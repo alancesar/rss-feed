@@ -21,7 +21,7 @@ import (
 //	@Failure		400		{string}	string	"invalid request body"
 //	@Failure		500		{string}	string	"internal server error"
 //	@Router			/feeds [post]
-func AddFeed(uc *usecase.AddFeed) http.HandlerFunc {
+func AddFeed(uc *usecase.PublishFeed) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var request presenter.AddFeedRequest
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -36,7 +36,10 @@ func AddFeed(uc *usecase.AddFeed) http.HandlerFunc {
 		}
 
 		render.Status(r, http.StatusCreated)
-		if err := render.Render(w, r, presenter.NewAddFeedResponseFromDomain(feed)); err != nil {
+		if err := render.Render(w, r, presenter.AddFeedResponse{
+			Name: feed.Name,
+			URL:  feed.URL,
+		}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

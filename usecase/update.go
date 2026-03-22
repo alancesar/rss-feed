@@ -3,46 +3,43 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"rss-summary/pkg/rss"
 )
 
 type (
 	FeedsStore interface {
-		FeedStore
 		GetAllFeedURLs(ctx context.Context) ([]string, error)
 	}
 
+	FeedHandlerFn func(context.Context, string) (rss.Feed, error)
+
 	UpdateFeeds struct {
 		store   FeedsStore
-		fetcher FeedFetcher
-		client  *http.Client
+		handler FeedHandlerFn
 	}
 )
 
-func NewUpdateFeeds(store FeedsStore, fetcher FeedFetcher) *UpdateFeeds {
+func NewUpdateFeeds(store FeedsStore, fn FeedHandlerFn) *UpdateFeeds {
 	return &UpdateFeeds{
 		store:   store,
-		fetcher: fetcher,
-		client:  http.DefaultClient,
+		handler: fn,
 	}
 }
 
-func (f UpdateFeeds) Execute(ctx context.Context) error {
-	urls, err := f.store.GetAllFeedURLs(ctx)
+func (uc UpdateFeeds) Execute(ctx context.Context) error {
+	urls, err := uc.store.GetAllFeedURLs(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, url := range urls {
 		fmt.Println("fetching", url)
-		feed, err := f.fetcher.Fetch(ctx, url)
+		f, err := uc.handler(ctx, url)
 		if err != nil {
 			return err
 		}
 
-		if err := f.store.SaveFeed(ctx, feed); err != nil {
-			return err
-		}
+		fmt.Println("fetched", f.Name, "from", url)
 	}
 
 	return nil

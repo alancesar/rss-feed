@@ -11,25 +11,24 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"rss-summary/handler"
 	"rss-summary/internal/database"
 	"rss-summary/internal/feed"
+	"rss-summary/internal/queue"
 	"rss-summary/internal/storage"
 	"rss-summary/usecase"
 
 	_ "rss-summary/docs"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
+	amqp "github.com/rabbitmq/amqp091-go"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -43,34 +42,26 @@ func main() {
 	if err != nil {
 		log.Fatalln("while opening sqlite database:", err)
 	}
+	sqliteDatabase := database.NewGorm(db)
 
-	cfg, err := config.LoadDefaultConfig(context.Background(),
-		config.WithRegion("us-east-1"),
-	)
-	if err != nil {
-		log.Fatalln("while loading AWS config:", err)
-	}
-
-	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.BaseEndpoint = aws.String("https://s3.alancesar.org")
-		o.UsePathStyle = true
-	})
-
-	s3Storage, err := storage.NewS3(s3Client)
+	s3Storage, err := storage.NewS3("https://s3.alancesar.org", "us-east-1", os.Getenv("AWS_BUCKET"))
 	if err != nil {
 		log.Fatalln("while creating s3 client:", err)
 	}
 
-	sqliteDatabase := database.NewGorm(db)
-	readUseCase := usecase.NewRead(sqliteDatabase, s3Storage)
-	addImagesUseCase := usecase.NewAddImages(http.DefaultClient, s3Storage, sqliteDatabase)
-	publisher := func(ctx context.Context, articleID, sourceURL string) error {
-		return addImagesUseCase.Execute(ctx, usecase.AddImageRequest{
-			ArticleID: articleID,
-			SourceURL: sourceURL,
-		})
+	dial, err := amqp.Dial("amqp://rabbitmq:Pa55w0rd@amqp.alancesar.org")
+	if err != nil {
+		log.Fatalln("while connecting to rabbitmq:", err)
 	}
-	addUseCase := usecase.NewAddFeed(sqliteDatabase, feed.NewGoFeed(publisher))
+
+	rabbitMQ := queue.NewRabbitMQ(dial)
+	publisher, err := rabbitMQ.NewPublisher("rss")
+	if err != nil {
+		log.Fatalln("while creating rabbitmq publisher:", err)
+	}
+
+	readArticlesUseCase := usecase.NewReadArticles(sqliteDatabase, s3Storage)
+	publishFeedUseCase := usecase.NewPublishFeed(publisher, feed.NewGoFeed())
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -86,12 +77,12 @@ func main() {
 	}
 
 	r.Route("/articles", func(r chi.Router) {
-		r.Get("/", handler.GetFromDate(readUseCase))
-		r.Get("/today", handler.ListToday(readUseCase))
+		r.Get("/", handler.GetFromDate(readArticlesUseCase))
+		r.Get("/today", handler.ListToday(readArticlesUseCase))
 	})
 
 	r.Route("/feeds", func(r chi.Router) {
-		r.Post("/", handler.AddFeed(addUseCase))
+		r.Post("/", handler.AddFeed(publishFeedUseCase))
 	})
 
 	r.Get("/swagger/*", httpSwagger.WrapHandler)

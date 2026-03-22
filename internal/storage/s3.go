@@ -2,18 +2,15 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
-
-var ErrNotFound = errors.New("object not found")
 
 type S3 struct {
 	client *s3.PresignClient
@@ -21,11 +18,23 @@ type S3 struct {
 	bucket string
 }
 
-func NewS3(client *s3.Client) (*S3, error) {
+func NewS3(endpoint, region, bucket string) (*S3, error) {
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion(region),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(endpoint)
+		o.UsePathStyle = true
+	})
+
 	return &S3{
 		client: s3.NewPresignClient(client),
 		tm:     transfermanager.New(client),
-		bucket: os.Getenv("AWS_BUCKET"),
+		bucket: bucket,
 	}, nil
 }
 

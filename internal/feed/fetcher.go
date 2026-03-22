@@ -2,9 +2,11 @@ package feed
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"rss-summary/pkg/rss"
+	"rss-summary/pkg/event"
 
 	"github.com/mmcdole/gofeed"
 )
@@ -14,46 +16,62 @@ var (
 )
 
 type (
-	PublishImageFn func(ctx context.Context, articleID, sourceURL string) error
-
 	GoFeed struct {
-		parser  *gofeed.Parser
-		publish PublishImageFn
+		parser *gofeed.Parser
 	}
 )
 
-func NewGoFeed(publisher PublishImageFn) *GoFeed {
+func NewGoFeed() *GoFeed {
 	return &GoFeed{
-		parser:  gofeed.NewParser(),
-		publish: publisher,
+		parser: gofeed.NewParser(),
 	}
 }
 
-func (r GoFeed) Fetch(ctx context.Context, url string) (rss.Feed, error) {
+func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 	feed, err := r.parser.ParseURLWithContext(url, ctx)
 	if err != nil {
-		return rss.Feed{}, fmt.Errorf("faield to parse feed: %w", err)
+		return event.Feed{}, fmt.Errorf("faield to parse feed: %w", err)
 	}
 
 	if len(feed.Items) == 0 {
-		return rss.Feed{}, ErrEmptyFeed
+		return event.Feed{}, ErrEmptyFeed
 	}
 
-	articles := make([]rss.Article, len(feed.Items))
+	feedID := hashFromString(url)
+	articles := make([]event.Article, len(feed.Items))
 	for i, item := range feed.Items {
-		article, err := rss.NewArticle(feed.Title, item.Title, item.Link, item.PublishedParsed)
-		if err != nil {
-			return rss.Feed{}, err
+		articleID := hashFromString(item.Link)
+		article := event.Article{
+			ArticleID: articleID,
+			FeedID:    feedID,
+			Title:     item.Title,
+			URL:       item.Link,
+		}
+
+		if item.PublishedParsed != nil {
+			article.PublishedAt = *item.PublishedParsed
 		}
 
 		if item.Image != nil {
-			if err := r.publish(ctx, article.ID, item.Image.URL); err != nil {
-				return rss.Feed{}, fmt.Errorf("failed to publish image: %w", err)
+			article.Image = event.Image{
+				ImageID:   hashFromString(item.Image.URL),
+				ArticleID: articleID,
+				URL:       item.Image.URL,
 			}
 		}
 
 		articles[i] = article
 	}
 
-	return rss.NewFeed(feed.Title, url, articles), nil
+	return event.Feed{
+		FeedID:   feedID,
+		Name:     feed.Title,
+		URL:      url,
+		Articles: articles,
+	}, nil
+}
+
+func hashFromString(input string) string {
+	hash := sha256.Sum256([]byte(input))
+	return hex.EncodeToString(hash[:])
 }

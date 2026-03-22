@@ -2,7 +2,6 @@ package presenter
 
 import (
 	"net/http"
-	"rss-summary/pkg/rss"
 )
 
 type (
@@ -11,25 +10,12 @@ type (
 	}
 
 	AddFeedResponse struct {
-		Name     string            `json:"name"`
-		URL      string            `json:"url"`
-		Articles []ArticleResponse `json:"articles"`
+		ID   string `json:"id" example:"abc123"`                        // Unique identifier for the feed
+		Name string `json:"name" example:"Some Feed"`                   // Name of the feed
+		URL  string `json:"url" example:"https://example.com/rss/feed"` // RSS feed URL
 	}
 )
 
 func (a AddFeedResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
-}
-
-func NewAddFeedResponseFromDomain(feed rss.Feed) AddFeedResponse {
-	articles := make([]ArticleResponse, len(feed.Articles))
-	for i, article := range feed.Articles {
-		articles[i] = NewArticleResponseFromDomain(article)
-	}
-
-	return AddFeedResponse{
-		Name:     feed.Name,
-		URL:      feed.URL,
-		Articles: articles,
-	}
 }

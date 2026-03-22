@@ -16,20 +16,20 @@ type (
 		Presign(ctx context.Context, path string, ttl time.Duration) (string, error)
 	}
 
-	ReadArticle struct {
+	ReadArticles struct {
 		store   ArticlesStore
 		storage ImageStorage
 	}
 )
 
-func NewRead(store ArticlesStore, storage ImageStorage) *ReadArticle {
-	return &ReadArticle{
+func NewReadArticles(store ArticlesStore, storage ImageStorage) *ReadArticles {
+	return &ReadArticles{
 		store:   store,
 		storage: storage,
 	}
 }
 
-func (uc ReadArticle) Execute(ctx context.Context, date time.Time) ([]rss.Article, error) {
+func (uc ReadArticles) Execute(ctx context.Context, date time.Time) ([]rss.Article, error) {
 	articles, err := uc.store.GetArticlesFromDate(ctx, date)
 	if err != nil {
 		return nil, fmt.Errorf("while getting articles from database: %w", err)
