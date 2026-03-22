@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+const (
+	OriginalImageType  ImageType = "original"
+	ThumbnailImageType ImageType = "thumbnail"
+)
+
 var (
 	rfc3339regex  = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$`)
 	dateOnlyRegex = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
@@ -16,6 +21,8 @@ var (
 
 type (
 	DateTime time.Time
+
+	ImageType string
 
 	Feed struct {
 		ID       string
@@ -25,7 +32,10 @@ type (
 	}
 
 	Image struct {
-		URL string
+		ID        string
+		ArticleID string
+		Path      string
+		Type      ImageType
 	}
 
 	Article struct {
@@ -33,7 +43,7 @@ type (
 		Source      string
 		Title       string
 		URL         string
-		Image       Image
+		Images      []Image
 		PublishedAt DateTime
 	}
 )
@@ -47,9 +57,12 @@ func NewFeed(name, url string, articles []Article) Feed {
 	}
 }
 
-func NewImage(url string) Image {
+func NewImage(articleID, path string, imgType ImageType) Image {
 	return Image{
-		URL: url,
+		ID:        hashFromString(articleID + string(imgType)),
+		ArticleID: articleID,
+		Path:      path,
+		Type:      imgType,
 	}
 }
 
@@ -66,10 +79,6 @@ func NewArticle(source, title, url, publishedAt string) (Article, error) {
 		URL:         url,
 		PublishedAt: dateTime,
 	}, nil
-}
-
-func (a Article) ImagePath() string {
-	return fmt.Sprintf("images/%s.jpg", a.ID)
 }
 
 func (a Article) ToMarkdown() string {

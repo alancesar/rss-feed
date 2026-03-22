@@ -35,13 +35,15 @@ func (uc ReadArticle) Execute(ctx context.Context, date time.Time) ([]rss.Articl
 		return nil, fmt.Errorf("while getting articles from database: %w", err)
 	}
 
-	for i := range articles {
-		signedURL, err := uc.storage.Presign(ctx, articles[i].ImagePath(), time.Hour)
-		if err != nil {
-			return nil, err
-		}
+	for i, article := range articles {
+		for j, image := range article.Images {
+			signedURL, err := uc.storage.Presign(ctx, image.Path, time.Hour)
+			if err != nil {
+				return nil, err
+			}
 
-		articles[i].Image = rss.NewImage(signedURL)
+			articles[i].Images[j].Path = signedURL
+		}
 	}
 
 	return articles, nil

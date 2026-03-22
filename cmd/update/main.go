@@ -43,10 +43,17 @@ func main() {
 	if err != nil {
 		log.Fatalln("while creating s3 client:", err)
 	}
-
 	sqliteDatabase := database.NewGorm(db)
-	addSourceUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(s3Storage, http.DefaultClient))
 
+	addImagesUseCase := usecase.NewAddImages(http.DefaultClient, s3Storage, sqliteDatabase)
+	publisher := func(ctx context.Context, articleID, sourceURL string) error {
+		return addImagesUseCase.Execute(ctx, usecase.AddImageRequest{
+			ArticleID: articleID,
+			SourceURL: sourceURL,
+		})
+	}
+
+	addSourceUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(publisher))
 	if err := addSourceUseCase.Execute(ctx); err != nil {
 		log.Println(err)
 	}

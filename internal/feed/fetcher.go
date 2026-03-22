@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"rss-summary/pkg/rss"
 
 	"github.com/mmcdole/gofeed"
@@ -16,22 +14,18 @@ var (
 )
 
 type (
-	FileStorage interface {
-		Create(ctx context.Context, path string, img io.Reader) error
-	}
+	PublishImageFn func(ctx context.Context, articleID, sourceURL string) error
 
 	GoFeed struct {
 		parser  *gofeed.Parser
-		storage FileStorage
-		client  *http.Client
+		publish PublishImageFn
 	}
 )
 
-func NewGoFeed(storage FileStorage, client *http.Client) *GoFeed {
+func NewGoFeed(publisher PublishImageFn) *GoFeed {
 	return &GoFeed{
 		parser:  gofeed.NewParser(),
-		storage: storage,
-		client:  client,
+		publish: publisher,
 	}
 }
 
@@ -53,8 +47,8 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (rss.Feed, error) {
 		}
 
 		if item.Image != nil {
-			if err := r.handleImage(ctx, item.Image.URL, article.ImagePath()); err != nil {
-				return rss.Feed{}, err
+			if err := r.publish(ctx, article.ID, item.Image.URL); err != nil {
+				return rss.Feed{}, fmt.Errorf("failed to publish image: %w", err)
 			}
 		}
 
@@ -62,21 +56,4 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (rss.Feed, error) {
 	}
 
 	return rss.NewFeed(feed.Title, url, articles), nil
-}
-
-func (r GoFeed) handleImage(ctx context.Context, source, target string) error {
-	resp, err := r.client.Get(source)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch image: %s", resp.Status)
-	}
-
-	if err := r.storage.Create(ctx, target, resp.Body); err != nil {
-		return err
-	}
-
-	return nil
 }

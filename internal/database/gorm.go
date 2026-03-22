@@ -16,7 +16,7 @@ type (
 )
 
 func NewGorm(db *gorm.DB) *Gorm {
-	_ = db.AutoMigrate(&model.Article{}, &model.Feed{})
+	_ = db.AutoMigrate(&model.Article{}, &model.Feed{}, &model.Image{})
 	return &Gorm{db: db}
 }
 
@@ -33,6 +33,7 @@ func (g Gorm) GetArticlesFromDate(ctx context.Context, date time.Time) ([]rss.Ar
 	var articles []model.Article
 	if err := g.db.WithContext(ctx).
 		Where("strftime('%Y-%m-%d', published_at) = ?", date.Format(time.DateOnly)).
+		Preload("Images").
 		Find(&articles).Error; err != nil {
 		return nil, err
 	}
@@ -56,4 +57,13 @@ func (g Gorm) GetAllFeedURLs(ctx context.Context) ([]string, error) {
 	}
 
 	return urls, nil
+}
+
+func (g Gorm) SaveImage(ctx context.Context, img rss.Image) error {
+	m := model.NewImageFromDomain(img)
+	if err := g.db.WithContext(ctx).Save(&m).Error; err != nil {
+		return err
+	}
+
+	return nil
 }

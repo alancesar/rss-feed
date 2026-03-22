@@ -63,7 +63,14 @@ func main() {
 
 	sqliteDatabase := database.NewGorm(db)
 	readUseCase := usecase.NewRead(sqliteDatabase, s3Storage)
-	addUseCase := usecase.NewAddFeed(sqliteDatabase, feed.NewGoFeed(s3Storage, http.DefaultClient))
+	addImagesUseCase := usecase.NewAddImages(http.DefaultClient, s3Storage, sqliteDatabase)
+	publisher := func(ctx context.Context, articleID, sourceURL string) error {
+		return addImagesUseCase.Execute(ctx, usecase.AddImageRequest{
+			ArticleID: articleID,
+			SourceURL: sourceURL,
+		})
+	}
+	addUseCase := usecase.NewAddFeed(sqliteDatabase, feed.NewGoFeed(publisher))
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
