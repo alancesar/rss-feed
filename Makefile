@@ -6,7 +6,7 @@ build:
 	go build -o bin/update ./cmd/update
 	go build -o bin/worker ./cmd/worker
 
-run:
+start:
 	go run ./cmd/api
 
 update:

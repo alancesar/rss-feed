@@ -87,7 +87,7 @@ Three tables: `feeds`, `articles`, `images` (`images` has a FK to `articles`, st
 ```bash
 make docs          # regenerate Swagger docs (swag init)
 make build         # compile binaries to ./bin/api, ./bin/update, ./bin/worker
-make run           # run the API server via go run
+make start         # start the API server via go run
 make update        # run the feed sync CLI via go run
 go generate ./...  # same as make docs — regenerate Swagger docs via go:generate directive
 ```
