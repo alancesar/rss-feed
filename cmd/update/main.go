@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"rss-summary/internal/database"
 	"rss-summary/internal/feed"
@@ -26,12 +27,20 @@ func main() {
 
 	sqliteDatabase := database.NewGorm(db)
 
-	dial, err := amqp.Dial("amqp://rabbitmq:Pa55w0rd@amqp.alancesar.org")
+	cfg := &tls.Config{
+		ServerName: "amqp.alancesar.org",
+	}
+
+	conn, err := amqp.DialTLS("amqps://rabbitmq:Pa55w0rd@amqp.alancesar.org", cfg)
 	if err != nil {
 		log.Fatalln("while connecting to rabbitmq:", err)
 	}
 
-	rabbitMQ := queue.NewRabbitMQ(dial)
+	defer func() {
+		_ = conn.Close()
+	}()
+
+	rabbitMQ := queue.NewRabbitMQ(conn)
 	publisher, err := rabbitMQ.NewPublisher("rss")
 	if err != nil {
 		log.Fatalln("while creating rabbitmq publisher:", err)

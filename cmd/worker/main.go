@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -34,12 +35,20 @@ func main() {
 		log.Fatalln("while creating s3 client:", err)
 	}
 
-	dial, err := amqp.Dial("amqp://rabbitmq:Pa55w0rd@amqp.alancesar.org")
+	cfg := &tls.Config{
+		ServerName: "amqp.alancesar.org",
+	}
+
+	conn, err := amqp.DialTLS("amqps://rabbitmq:Pa55w0rd@amqp.alancesar.org", cfg)
 	if err != nil {
 		log.Fatalln("while connecting to rabbitmq:", err)
 	}
 
-	rabbitMQ := queue.NewRabbitMQ(dial)
+	defer func() {
+		_ = conn.Close()
+	}()
+
+	rabbitMQ := queue.NewRabbitMQ(conn)
 	feedConsumer, err := rabbitMQ.NewConsumer("rss.feed.found")
 	if err != nil {
 		log.Fatalln("while creating rabbitmq publisher:", err)
