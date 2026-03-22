@@ -24,7 +24,7 @@ func (a AddFeedResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 func NewAddFeedResponseFromDomain(feed rss.Feed) AddFeedResponse {
 	articles := make([]ArticleResponse, len(feed.Articles))
 	for i, article := range feed.Articles {
-		articles[i] = NewArticleResponseFromDomain(article, article.ImagePath())
+		articles[i] = NewArticleResponseFromDomain(article)
 	}
 
 	return AddFeedResponse{

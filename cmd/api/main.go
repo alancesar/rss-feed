@@ -11,15 +11,21 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"rss-summary/handler"
 	"rss-summary/internal/database"
 	"rss-summary/internal/feed"
+	"rss-summary/internal/storage"
 	"rss-summary/usecase"
 
 	_ "rss-summary/docs"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -38,16 +44,36 @@ func main() {
 		log.Fatalln("while opening sqlite database:", err)
 	}
 
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion("us-east-1"),
+	)
+
+	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String("https://s3.alancesar.org")
+		o.UsePathStyle = true
+	})
+
+	s3Storage, err := storage.NewS3(s3Client)
+	if err != nil {
+		log.Fatalln("while creating s3 client:", err)
+	}
+
+	sqliteDatabase := database.NewGorm(db)
+	readUseCase := usecase.NewRead(sqliteDatabase, s3Storage)
+	addUseCase := usecase.NewAddFeed(sqliteDatabase, feed.NewGoFeed(s3Storage, http.DefaultClient))
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-	r.Use(render.SetContentType(render.ContentTypeJSON))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"http://localhost*"},
 	}))
 
-	sqliteDatabase := database.NewGorm(db)
-	readUseCase := usecase.NewRead(sqliteDatabase)
-	addUseCase := usecase.NewAddFeed(sqliteDatabase, feed.NewGoFeed())
+	render.Respond = func(w http.ResponseWriter, r *http.Request, v interface{}) {
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		enc.SetEscapeHTML(false)
+		_ = enc.Encode(v)
+	}
 
 	r.Route("/articles", func(r chi.Router) {
 		r.Get("/", handler.GetFromDate(readUseCase))
