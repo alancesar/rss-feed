@@ -56,6 +56,14 @@ func (f *recordingFetcher) Fetch(_ context.Context, url string) (event.Feed, err
 	return f.feed, nil
 }
 
+type funcFetcher struct {
+	fn func(url string) (event.Feed, error)
+}
+
+func (f *funcFetcher) Fetch(_ context.Context, url string) (event.Feed, error) {
+	return f.fn(url)
+}
+
 type mockStorage struct{}
 
 func (m *mockStorage) Create(_ context.Context, _ string, _ io.Reader) error { return nil }

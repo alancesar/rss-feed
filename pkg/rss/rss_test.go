@@ -32,3 +32,31 @@ func TestNewImage_IDDerivedFromPath(t *testing.T) {
 		t.Error("expected different paths to produce different IDs")
 	}
 }
+
+func TestArticle_ToMarkdown(t *testing.T) {
+	article := rss.Article{
+		Title: "Hello World",
+		URL:   "https://example.com/post-1",
+	}
+
+	got := article.ToMarkdown()
+	want := "[Hello World](https://example.com/post-1)"
+
+	if got != want {
+		t.Errorf("expected %q, got %q", want, got)
+	}
+}
+
+func TestArticle_ToMarkdown_UnescapesHTMLEntities(t *testing.T) {
+	article := rss.Article{
+		Title: "Rust &amp; Go: A Comparison",
+		URL:   "https://example.com/post-1",
+	}
+
+	got := article.ToMarkdown()
+	want := "[Rust & Go: A Comparison](https://example.com/post-1)"
+
+	if got != want {
+		t.Errorf("expected %q, got %q", want, got)
+	}
+}

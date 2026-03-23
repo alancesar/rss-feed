@@ -2,10 +2,12 @@ package usecase_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"rss-feed/pkg/event"
+	"rss-feed/pkg/rss"
 	"rss-feed/usecase"
 )
 
@@ -44,5 +46,23 @@ func TestSaveFeed_Execute(t *testing.T) {
 	}
 	if saved.ID != "feed-abc" {
 		t.Errorf("expected feed ID %q, got %q", "feed-abc", saved.ID)
+	}
+}
+
+func TestSaveFeed_Execute_Duplicate(t *testing.T) {
+	ctx := context.Background()
+	db := newTestDB(t)
+
+	if err := db.CreateFeed(ctx, rss.Feed{ID: "feed-abc", Name: "Test Blog", URL: "https://example.com/feed.xml"}); err != nil {
+		t.Fatalf("creating feed: %v", err)
+	}
+
+	uc := usecase.NewSaveFeed(&mockFetcher{}, db, &mockPublisher{})
+	_, err := uc.Execute(ctx, "https://example.com/feed.xml")
+	if err == nil {
+		t.Fatal("expected error for duplicate feed, got nil")
+	}
+	if !errors.Is(err, rss.ErrFeedAlreadyExists) {
+		t.Errorf("expected ErrFeedAlreadyExists, got %v", err)
 	}
 }
