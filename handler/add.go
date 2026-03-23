@@ -21,7 +21,7 @@ import (
 //	@Failure		400		{string}	string	"invalid request body"
 //	@Failure		500		{string}	string	"internal server error"
 //	@Router			/feeds [post]
-func AddFeed(uc *usecase.PublishFeed) http.HandlerFunc {
+func AddFeed(uc *usecase.SaveFeed) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var request presenter.AddFeedRequest
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {

@@ -17,22 +17,22 @@ type (
 		SaveFeed(context.Context, rss.Feed) error
 	}
 
-	PublishFeed struct {
+	SaveFeed struct {
 		fetcher   FeedFetcher
 		store     FeedStore
 		publisher Publisher
 	}
 )
 
-func NewPublishFeed(fetcher FeedFetcher, store FeedStore, publisher Publisher) *PublishFeed {
-	return &PublishFeed{
+func NewSaveFeed(fetcher FeedFetcher, store FeedStore, publisher Publisher) *SaveFeed {
+	return &SaveFeed{
 		publisher: publisher,
 		store:     store,
 		fetcher:   fetcher,
 	}
 }
 
-func (uc PublishFeed) Execute(ctx context.Context, url string) (rss.Feed, error) {
+func (uc SaveFeed) Execute(ctx context.Context, url string) (rss.Feed, error) {
 	log := zerolog.Ctx(ctx)
 
 	log.Info().Str("url", url).Msg("fetching feed")

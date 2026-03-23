@@ -65,7 +65,7 @@ func main() {
 	}
 
 	readArticlesUseCase := usecase.NewReadArticles(sqliteDatabase, s3Storage)
-	publishFeedUseCase := usecase.NewPublishFeed(feed.NewGoFeed(), sqliteDatabase, publisher)
+	saveFeedUseCase := usecase.NewSaveFeed(feed.NewGoFeed(), sqliteDatabase, publisher)
 
 	r := chi.NewRouter()
 	r.Use(func(next http.Handler) http.Handler {
@@ -96,7 +96,7 @@ func main() {
 	})
 
 	r.Route("/feeds", func(r chi.Router) {
-		r.Post("/", handler.AddFeed(publishFeedUseCase))
+		r.Post("/", handler.AddFeed(saveFeedUseCase))
 	})
 
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
