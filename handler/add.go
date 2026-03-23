@@ -17,7 +17,7 @@ import (
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		presenter.AddFeedRequest	true	"Feed URL"
-//	@Success		201		{object}	presenter.AddFeedResponse
+//	@Success		201		{object}	presenter.FeedResponse
 //	@Failure		400		{string}	string	"invalid request body"
 //	@Failure		500		{string}	string	"internal server error"
 //	@Router			/feeds [post]
@@ -36,7 +36,8 @@ func AddFeed(uc *usecase.PublishFeed) http.HandlerFunc {
 		}
 
 		render.Status(r, http.StatusCreated)
-		if err := render.Render(w, r, presenter.AddFeedResponse{
+		if err := render.Render(w, r, presenter.FeedResponse{
+			ID:   feed.ID,
 			Name: feed.Name,
 			URL:  feed.URL,
 		}); err != nil {
