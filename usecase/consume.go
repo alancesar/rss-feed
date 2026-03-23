@@ -28,16 +28,7 @@ func NewConsumeFeed(store FeedStore, publisher Publisher) *ConsumeFeed {
 
 func (uc ConsumeFeed) Execute(ctx context.Context, e event.Feed) error {
 	log := zerolog.Ctx(ctx)
-
-	articles := make([]rss.Article, len(e.Articles))
-	for i, article := range e.Articles {
-		articles[i] = rss.Article{
-			ID:          article.ArticleID,
-			Title:       article.Title,
-			URL:         article.URL,
-			PublishedAt: article.PublishedAt,
-		}
-	}
+	feed := e.ToDomain()
 
 	feed := rss.Feed{
 		ID:       e.FeedID,

@@ -1,6 +1,9 @@
 package event
 
-import "time"
+import (
+	"rss-feed/pkg/rss"
+	"time"
+)
 
 type (
 	Feed struct {
@@ -25,3 +28,26 @@ type (
 		PublishedAt time.Time `json:"published_at"`
 	}
 )
+
+func (a Article) ToDomain() rss.Article {
+	return rss.Article{
+		ID:          a.ArticleID,
+		Title:       a.Title,
+		URL:         a.URL,
+		PublishedAt: a.PublishedAt,
+	}
+}
+
+func (f Feed) ToDomain() rss.Feed {
+	articles := make([]rss.Article, len(f.Articles))
+	for i, article := range f.Articles {
+		articles[i] = article.ToDomain()
+	}
+
+	return rss.Feed{
+		ID:       f.FeedID,
+		Name:     f.Name,
+		URL:      f.URL,
+		Articles: articles,
+	}
+}
