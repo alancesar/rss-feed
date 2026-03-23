@@ -10,14 +10,14 @@ type (
 		ID        string `gorm:"primarykey"`
 		Name      string
 		URL       string
-		Articles  []Article
+		Articles  []Article `gorm:"foreignKey:FeedID;references:ID"`
 		CreatedAt time.Time
 	}
 
 	Article struct {
 		ID          string `gorm:"primarykey"`
-		FeedID      string
-		Source      string
+		FeedID      string `gorm:"index"`
+		Feed        Feed   `gorm:"foreignKey:FeedID;references:ID"`
 		Title       string
 		URL         string `gorm:"uniqueIndex"`
 		Images      []Image

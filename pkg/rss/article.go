@@ -31,7 +31,6 @@ type (
 
 	Article struct {
 		ID          string
-		Source      string
 		Title       string
 		URL         string
 		Feed        Feed

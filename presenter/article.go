@@ -8,9 +8,9 @@ import (
 
 type (
 	ArticleResponse struct {
-		Source      string          `json:"source"`
 		Title       string          `json:"title"`
 		URL         string          `json:"url"`
+		Feed        FeedResponse    `json:"feed"`
 		Images      []ImageResponse `json:"images"`
 		PublishedAt time.Time       `json:"published_at" example:"2006-01-02T15:04:05-07:00" format:"date-time"` // RFC3339 timestamp with timezone offset
 	}
@@ -54,9 +54,13 @@ func NewArticleResponseFromDomain(article rss.Article) ArticleResponse {
 	}
 
 	return ArticleResponse{
-		Source:      article.Source,
-		Title:       article.Title,
-		URL:         article.URL,
+		Title: article.Title,
+		URL:   article.URL,
+		Feed: FeedResponse{
+			ID:   article.Feed.ID,
+			Name: article.Feed.Name,
+			URL:  article.Feed.URL,
+		},
 		Images:      images,
 		PublishedAt: article.PublishedAt,
 	}
