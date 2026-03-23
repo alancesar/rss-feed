@@ -47,21 +47,6 @@ func NewImage(path string, imgType ImageType) Image {
 	}
 }
 
-func NewArticle(source, title, url string, publishedAt *time.Time) (Article, error) {
-	article := Article{
-		ID:     hashFromString(url),
-		Source: source,
-		Title:  title,
-		URL:    url,
-	}
-
-	if publishedAt != nil {
-		article.PublishedAt = *publishedAt
-	}
-
-	return article, nil
-}
-
 func (a Article) ToMarkdown() string {
 	return fmt.Sprintf(`[%s](%s)`, html.UnescapeString(a.Title), a.URL)
 }
