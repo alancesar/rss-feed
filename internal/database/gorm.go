@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"rss-feed/internal/database/model"
 	"rss-feed/pkg/rss"
 	"time"
@@ -21,14 +22,28 @@ func NewGorm(db *gorm.DB) *Gorm {
 	return &Gorm{db: db}
 }
 
-func (g Gorm) SaveFeed(ctx context.Context, feed rss.Feed) error {
-	zerolog.Ctx(ctx).Info().Str("feed", feed.Name).Int("articles", len(feed.Articles)).Msg("saving feed to database")
+func (g Gorm) CreateFeed(ctx context.Context, feed rss.Feed) error {
+	zerolog.Ctx(ctx).Info().Str("feed", feed.Name).Msg("saving feed to database")
 	m := model.NewFeedFromDomain(feed)
-	if err := g.db.WithContext(ctx).Save(&m).Error; err != nil {
+	if err := g.db.WithContext(ctx).Create(&m).Error; err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (g Gorm) GetFeedByURL(ctx context.Context, url string) (rss.Feed, bool, error) {
+	zerolog.Ctx(ctx).Info().Str("url", url).Msg("fetching feed")
+	var m model.Feed
+	if err := g.db.WithContext(ctx).Where("url = ?", url).Preload("Articles").First(&m).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return rss.Feed{}, false, nil
+		}
+
+		return rss.Feed{}, false, err
+	}
+
+	return m.ToDomain(), true, nil
 }
 
 func (g Gorm) SaveArticle(ctx context.Context, feedID string, article rss.Article) error {

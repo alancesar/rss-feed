@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"rss-feed/pkg/event"
 	"rss-feed/pkg/rss"
 
@@ -9,12 +10,9 @@ import (
 )
 
 type (
-	FeedFetcher interface {
-		Fetch(context.Context, string) (event.Feed, error)
-	}
-
 	FeedStore interface {
-		SaveFeed(context.Context, rss.Feed) error
+		GetFeedByURL(context.Context, string) (rss.Feed, bool, error)
+		CreateFeed(context.Context, rss.Feed) error
 	}
 
 	SaveFeed struct {
@@ -35,6 +33,13 @@ func NewSaveFeed(fetcher FeedFetcher, store FeedStore, publisher Publisher) *Sav
 func (uc SaveFeed) Execute(ctx context.Context, url string) (rss.Feed, error) {
 	log := zerolog.Ctx(ctx)
 
+	if _, exists, err := uc.store.GetFeedByURL(ctx, url); err != nil {
+		return rss.Feed{}, err
+	} else if exists {
+		log.Info().Str("url", url).Msg("feed already exists, skipping")
+		return rss.Feed{}, fmt.Errorf("%w: %s", rss.ErrFeedAlreadyExists, url)
+	}
+
 	log.Info().Str("url", url).Msg("fetching feed")
 	fetchedFeed, err := uc.fetcher.Fetch(ctx, url)
 	if err != nil {
@@ -48,12 +53,12 @@ func (uc SaveFeed) Execute(ctx context.Context, url string) (rss.Feed, error) {
 	}
 
 	log.Info().Str("feed", fetchedFeed.Name).Msg("saving feed")
-	if err := uc.store.SaveFeed(ctx, feed); err != nil {
+	if err := uc.store.CreateFeed(ctx, feed); err != nil {
 		return rss.Feed{}, err
 	}
 
-	log.Info().Str("feed", fetchedFeed.Name).Int("articles", len(fetchedFeed.Articles)).Msg("publishing feed.found event")
-	if err := uc.publisher.Publish(ctx, "feed.found", event.Event{
+	log.Info().Str("feed", fetchedFeed.Name).Int("articles", len(fetchedFeed.Articles)).Msg("publishing feed.article.found event")
+	if err := uc.publisher.Publish(ctx, "feed.article.found", event.Event{
 		Payload: fetchedFeed,
 	}); err != nil {
 		return rss.Feed{}, err

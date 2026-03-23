@@ -2,7 +2,9 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"rss-feed/pkg/rss"
 	"rss-feed/presenter"
 	"rss-feed/usecase"
 
@@ -31,6 +33,11 @@ func AddFeed(uc *usecase.SaveFeed) http.HandlerFunc {
 
 		feed, err := uc.Execute(r.Context(), request.URL)
 		if err != nil {
+			if errors.Is(err, rss.ErrFeedAlreadyExists) {
+				http.Error(w, "feed already exists", http.StatusConflict)
+				return
+			}
+
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

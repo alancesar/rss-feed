@@ -55,8 +55,7 @@ func main() {
 		log.Fatal().Err(err).Msg("creating rabbitmq publisher")
 	}
 
-	saveFeedUseCase := usecase.NewSaveFeed(feed.NewGoFeed(), sqliteDatabase, publisher)
-	updateFeedUseCase := usecase.NewUpdateFeeds(sqliteDatabase, saveFeedUseCase.Execute)
+	updateFeedUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), publisher)
 	if err := updateFeedUseCase.Execute(ctx); err != nil {
 		log.Error().Err(err).Msg("updating feeds")
 	}

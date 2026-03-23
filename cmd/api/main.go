@@ -85,6 +85,9 @@ func main() {
 
 	render.Respond = func(w http.ResponseWriter, r *http.Request, v interface{}) {
 		w.Header().Set("Content-Type", "application/json")
+		if status, ok := r.Context().Value(render.StatusCtxKey).(int); ok {
+			w.WriteHeader(status)
+		}
 		enc := json.NewEncoder(w)
 		enc.SetEscapeHTML(false)
 		_ = enc.Encode(v)

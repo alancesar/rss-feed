@@ -3,9 +3,14 @@ package rss
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"html"
 	"time"
+)
+
+var (
+	ErrFeedAlreadyExists = errors.New("feed already exists")
 )
 
 const (

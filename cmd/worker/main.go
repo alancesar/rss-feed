@@ -57,9 +57,9 @@ func main() {
 	}()
 
 	rabbitMQ := queue.NewRabbitMQ(conn)
-	feedConsumer, err := rabbitMQ.NewConsumer("rss.feed.found")
+	feedConsumer, err := rabbitMQ.NewConsumer("rss.feed.article.found")
 	if err != nil {
-		log.Fatal().Err(err).Msg("creating rss.feed.found consumer")
+		log.Fatal().Err(err).Msg("creating rss.feed.article.found consumer")
 	}
 
 	imagesConsumer, err := rabbitMQ.NewConsumer("rss.feed.article.image.found")
@@ -86,7 +86,7 @@ func main() {
 
 			return consumeFeedUseCase.Execute(ctx, e)
 		}); err != nil {
-			log.Fatal().Err(err).Msg("consuming rss.feed.found events")
+			log.Fatal().Err(err).Msg("consuming rss.feed.article.found events")
 		}
 	}()
 
