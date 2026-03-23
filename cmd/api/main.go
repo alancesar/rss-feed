@@ -65,7 +65,7 @@ func main() {
 	}
 
 	readArticlesUseCase := usecase.NewReadArticles(sqliteDatabase, s3Storage)
-	publishFeedUseCase := usecase.NewPublishFeed(publisher, feed.NewGoFeed())
+	publishFeedUseCase := usecase.NewPublishFeed(feed.NewGoFeed(), sqliteDatabase, publisher)
 
 	r := chi.NewRouter()
 	r.Use(func(next http.Handler) http.Handler {
