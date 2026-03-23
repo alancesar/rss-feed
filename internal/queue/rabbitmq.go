@@ -6,7 +6,6 @@ import (
 	"rss-feed/pkg/event"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/rs/zerolog"
 )
 
 type (
@@ -63,7 +62,6 @@ func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.E
 		return err
 	}
 
-	zerolog.Ctx(ctx).Info().Str("exchange", p.exchange).Str("topic", topic).Msg("publishing event")
 	if err := p.channel.PublishWithContext(ctx, p.exchange, topic, false, false, amqp.Publishing{
 		Headers: e.Headers,
 		Body:    body,
@@ -84,11 +82,8 @@ func (c RabbitMQConsumer) Consume(ctx context.Context, handler Handler) error {
 		return err
 	}
 
-	log := zerolog.Ctx(ctx)
-	log.Info().Str("queue", c.queue).Msg("starting consumer")
 	for delivery := range deliveries {
 		if err := handler(ctx, delivery.Body); err != nil {
-			log.Error().Err(err).Str("queue", c.queue).Msg("message processing failed, nacking")
 			_ = delivery.Nack(false, true)
 		} else {
 			_ = delivery.Ack(false)

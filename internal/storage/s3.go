@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/rs/zerolog"
 )
 
 type S3 struct {
@@ -41,7 +40,6 @@ func NewS3(endpoint, region, bucket string) (*S3, error) {
 
 // Create uploads the content from body to S3 at the given path.
 func (s *S3) Create(ctx context.Context, path string, body io.Reader) error {
-	zerolog.Ctx(ctx).Info().Str("bucket", s.bucket).Str("path", path).Msg("uploading object to s3")
 	_, err := s.tm.UploadObject(ctx, &transfermanager.UploadObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
