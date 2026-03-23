@@ -101,6 +101,11 @@ go generate ./...  # same as make docs — regenerate Swagger docs via go:genera
 - Image paths are derived at upload time from article ID + file extension (not stored as a template)
 - CORS allows all localhost origins regardless of port
 
+## Testing Convention
+
+- Tests that interact with the database must use a real SQLite instance (via `newTestDB` in `usecase/integration_test.go`) — never mock the database
+- Every new method must have a corresponding test; write the test alongside the implementation (TDD-like)
+
 ## Domain Binding Convention
 
 Structs that are populated from a domain entity (types living in `pkg/`) must be constructed via a `New...` function:
