@@ -34,6 +34,7 @@ type (
 		Source      string
 		Title       string
 		URL         string
+		Feed        Feed
 		Images      []Image
 		PublishedAt time.Time
 	}

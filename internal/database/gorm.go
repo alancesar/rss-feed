@@ -45,6 +45,7 @@ func (g Gorm) GetArticlesFromDate(ctx context.Context, date time.Time) ([]rss.Ar
 	var articles []model.Article
 	if err := g.db.WithContext(ctx).
 		Where("strftime('%Y-%m-%d', published_at) = ?", date.Format(time.DateOnly)).
+		Preload("Feed").
 		Preload("Images").
 		Find(&articles).Error; err != nil {
 		return nil, err
