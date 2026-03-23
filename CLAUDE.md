@@ -100,3 +100,25 @@ go generate ./...  # same as make docs — regenerate Swagger docs via go:genera
 - `Article.Images []Image` — an article can have multiple images (original, thumbnail types defined)
 - Image paths are derived at upload time from article ID + file extension (not stored as a template)
 - CORS allows all localhost origins regardless of port
+
+## Domain Binding Convention
+
+Structs that are populated from a domain entity (types living in `pkg/`) must be constructed via a `New...` function:
+
+```go
+// correct
+func NewFeedResponse(feed rss.Feed) FeedResponse { ... }
+response := presenter.NewFeedResponse(feed)
+
+// incorrect — do not fill presenter/model structs inline
+response := presenter.FeedResponse{ID: feed.ID, Name: feed.Name, URL: feed.URL}
+```
+
+Structs that need to be converted back into a domain entity must expose a `ToDomain()` method:
+
+```go
+func (f Feed) ToDomain() rss.Feed { ... }
+domain := model.ToDomain()
+```
+
+This applies to all layers that bridge to the domain: `presenter/`, `internal/database/model/`, and `pkg/event/`.
