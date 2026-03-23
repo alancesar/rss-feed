@@ -25,13 +25,14 @@ cmd/worker/       → Long-running worker: consumes RabbitMQ events and processe
 
 ```
 cmd/update
-    └─► PublishFeed.Execute(url)
-            └─► fetcher.Fetch() → event.Feed
-            └─► RabbitMQ publish → "rss.feed.found"
+    └─► UpdateFeeds.Execute()
+            └─► for each url:
+                    └─► fetcher.Fetch() → event.Feed
+                    └─► RabbitMQ publish → "rss.feed.article.found"
 
-cmd/worker (consumer 1: "rss.feed.found")
+cmd/worker (consumer 1: "rss.feed.article.found")
     └─► ConsumeFeed.Execute(event.Feed)
-            └─► SaveFeed to SQLite
+            └─► for each article: SaveArticle to SQLite
             └─► for each article with image:
                     └─► RabbitMQ publish → "rss.feed.article.image.found"
 
@@ -54,10 +55,10 @@ Responses include `image_url` as a presigned S3 URL (1h TTL), generated at read 
 
 ## Use Cases
 
-- `PublishFeed` — fetches RSS feed and publishes a `feed.found` event to RabbitMQ
-- `ConsumeFeed` — persists feed+articles to DB, publishes `feed.article.image.found` per image
+- `SaveFeed` — checks for duplicates, persists feed to DB, then publishes a `feed.article.found` event to RabbitMQ
+- `ConsumeFeed` — saves each article to DB, publishes `feed.article.image.found` per article with image
 - `ConsumeImage` — downloads image, uploads to S3, saves image record to DB
-- `UpdateFeeds` — iterates all stored feed URLs and calls `PublishFeed.Execute` for each
+- `UpdateFeeds` — iterates all stored feed URLs, fetches each and publishes `feed.article.found` events
 - `ReadArticles` — queries articles by date and presigns image URLs
 
 ## Database
@@ -68,7 +69,7 @@ Three tables: `feeds`, `articles`, `images` (`images` has a FK to `articles`, st
 
 ## Infrastructure
 
-- **RabbitMQ** — exchange `rss`, queues `rss.feed.found` and `rss.feed.article.image.found`
+- **RabbitMQ** — exchange `rss`, queues `rss.feed.article.found` and `rss.feed.article.image.found`
 - **S3-compatible storage** — configured via `storage.NewS3(endpoint, region, bucket)`; images stored under `images/original/`
 - **Presigned URLs** — generated on read with 1h TTL
 
