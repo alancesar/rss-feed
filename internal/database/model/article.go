@@ -37,7 +37,7 @@ type (
 func NewFeedFromDomain(feed rss.Feed) Feed {
 	articles := make([]Article, len(feed.Articles))
 	for i, article := range feed.Articles {
-		articles[i] = NewArticleFromDomain(article, feed)
+		articles[i] = NewArticleFromDomain(article, feed.ID)
 	}
 
 	return Feed{
@@ -48,11 +48,10 @@ func NewFeedFromDomain(feed rss.Feed) Feed {
 	}
 }
 
-func NewArticleFromDomain(article rss.Article, feed rss.Feed) Article {
+func NewArticleFromDomain(article rss.Article, feedID string) Article {
 	return Article{
 		ID:          article.ID,
-		FeedID:      feed.ID,
-		Source:      feed.Name,
+		FeedID:      feedID,
 		Title:       article.Title,
 		URL:         article.URL,
 		PublishedAt: article.PublishedAt,
@@ -83,11 +82,15 @@ func (a Article) ToDomain() rss.Article {
 	}
 
 	return rss.Article{
-		ID:          a.ID,
-		Source:      a.Source,
-		Title:       a.Title,
-		URL:         a.URL,
-		Images:      images,
+		ID:     a.ID,
+		Title:  a.Title,
+		URL:    a.URL,
+		Images: images,
+		Feed: rss.Feed{
+			ID:   a.Feed.ID,
+			Name: a.Feed.Name,
+			URL:  a.Feed.URL,
+		},
 		PublishedAt: a.PublishedAt,
 	}
 }
