@@ -19,7 +19,7 @@ type (
 	}
 
 	ImageStore interface {
-		SaveImage(ctx context.Context, Image rss.Image) error
+		SaveImage(ctx context.Context, articleID string, Image rss.Image) error
 	}
 
 	ConsumeImage struct {
@@ -66,9 +66,9 @@ func (uc ConsumeImage) Execute(ctx context.Context, e event.Image) error {
 		return err
 	}
 
-	img := rss.NewImage(e.ArticleID, path, rss.OriginalImageType)
+	img := rss.NewImage(path, rss.OriginalImageType)
 	log.Info().Str("article_id", e.ArticleID).Str("path", path).Msg("saving image to database")
-	if err := uc.db.SaveImage(ctx, img); err != nil {
+	if err := uc.db.SaveImage(ctx, e.ArticleID, img); err != nil {
 		return err
 	}
 

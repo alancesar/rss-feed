@@ -72,9 +72,9 @@ func (g Gorm) GetAllFeedURLs(ctx context.Context) ([]string, error) {
 	return urls, nil
 }
 
-func (g Gorm) SaveImage(ctx context.Context, img rss.Image) error {
-	zerolog.Ctx(ctx).Info().Str("article_id", img.ArticleID).Str("path", img.Path).Msg("saving image to database")
-	m := model.NewImageFromDomain(img)
+func (g Gorm) SaveImage(ctx context.Context, articleID string, img rss.Image) error {
+	zerolog.Ctx(ctx).Info().Str("article_id", articleID).Str("path", img.Path).Msg("saving image to database")
+	m := model.NewImageFromDomain(img, articleID)
 	if err := g.db.WithContext(ctx).Save(&m).Error; err != nil {
 		return err
 	}

@@ -59,10 +59,10 @@ func NewArticleFromDomain(article rss.Article, feed rss.Feed) Article {
 	}
 }
 
-func NewImageFromDomain(image rss.Image) Image {
+func NewImageFromDomain(image rss.Image, articleID string) Image {
 	return Image{
 		ID:        image.ID,
-		ArticleID: image.ArticleID,
+		ArticleID: articleID,
 		Path:      image.Path,
 		Type:      string(image.Type),
 	}
@@ -94,9 +94,8 @@ func (a Article) ToDomain() rss.Article {
 
 func (i Image) ToDomain() rss.Image {
 	return rss.Image{
-		ID:        i.ID,
-		ArticleID: i.ArticleID,
-		Path:      i.Path,
-		Type:      rss.ImageType(i.Type),
+		ID:   i.ID,
+		Path: i.Path,
+		Type: rss.ImageType(i.Type),
 	}
 }

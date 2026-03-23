@@ -24,10 +24,9 @@ type (
 	}
 
 	Image struct {
-		ID        string
-		ArticleID string
-		Path      string
-		Type      ImageType
+		ID   string
+		Path string
+		Type ImageType
 	}
 
 	Article struct {
@@ -40,21 +39,11 @@ type (
 	}
 )
 
-func NewFeed(name, url string, articles []Article) Feed {
-	return Feed{
-		ID:       hashFromString(url),
-		Name:     name,
-		URL:      url,
-		Articles: articles,
-	}
-}
-
-func NewImage(articleID, path string, imgType ImageType) Image {
+func NewImage(path string, imgType ImageType) Image {
 	return Image{
-		ID:        hashFromString(articleID + string(imgType)),
-		ArticleID: articleID,
-		Path:      path,
-		Type:      imgType,
+		ID:   hashFromString(path),
+		Path: path,
+		Type: imgType,
 	}
 }
 
