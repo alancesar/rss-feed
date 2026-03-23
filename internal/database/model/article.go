@@ -19,15 +19,15 @@ type (
 		FeedID      string `gorm:"index"`
 		Feed        Feed   `gorm:"foreignKey:FeedID;references:ID"`
 		Title       string
-		URL         string `gorm:"uniqueIndex"`
-		Images      []Image
+		URL         string  `gorm:"uniqueIndex"`
+		Images      []Image `gorm:"foreignKey:ArticleID;references:ID"`
 		CreatedAt   time.Time
 		PublishedAt time.Time `gorm:"index"`
 	}
 
 	Image struct {
 		ID        string `gorm:"primarykey"`
-		ArticleID string
+		ArticleID string `gorm:"index"`
 		Path      string
 		Type      string
 		CreatedAt time.Time
