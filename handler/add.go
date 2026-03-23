@@ -43,11 +43,7 @@ func AddFeed(uc *usecase.SaveFeed) http.HandlerFunc {
 		}
 
 		render.Status(r, http.StatusCreated)
-		if err := render.Render(w, r, presenter.FeedResponse{
-			ID:   feed.ID,
-			Name: feed.Name,
-			URL:  feed.URL,
-		}); err != nil {
+		if err := render.Render(w, r, presenter.NewFeedResponse(feed)); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

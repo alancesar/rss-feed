@@ -2,6 +2,7 @@ package presenter
 
 import (
 	"net/http"
+	"rss-feed/pkg/rss"
 )
 
 type (
@@ -15,6 +16,14 @@ type (
 		URL  string `json:"url" example:"https://example.com/rss/feed"` // RSS feed URL
 	}
 )
+
+func NewFeedResponse(feed rss.Feed) FeedResponse {
+	return FeedResponse{
+		ID:   feed.ID,
+		Name: feed.Name,
+		URL:  feed.URL,
+	}
+}
 
 func (a FeedResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil

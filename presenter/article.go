@@ -54,13 +54,9 @@ func NewArticleResponseFromDomain(article rss.Article) ArticleResponse {
 	}
 
 	return ArticleResponse{
-		Title: article.Title,
-		URL:   article.URL,
-		Feed: FeedResponse{
-			ID:   article.Feed.ID,
-			Name: article.Feed.Name,
-			URL:  article.Feed.URL,
-		},
+		Title:       article.Title,
+		URL:         article.URL,
+		Feed:        NewFeedResponse(article.Feed),
 		Images:      images,
 		PublishedAt: article.PublishedAt,
 	}

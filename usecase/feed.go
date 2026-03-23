@@ -46,11 +46,7 @@ func (uc SaveFeed) Execute(ctx context.Context, url string) (rss.Feed, error) {
 		return rss.Feed{}, err
 	}
 
-	feed := rss.Feed{
-		ID:   fetchedFeed.FeedID,
-		Name: fetchedFeed.Name,
-		URL:  fetchedFeed.URL,
-	}
+	feed := fetchedFeed.ToDomain()
 
 	log.Info().Str("feed", fetchedFeed.Name).Msg("saving feed")
 	if err := uc.store.CreateFeed(ctx, feed); err != nil {

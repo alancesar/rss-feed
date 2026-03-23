@@ -82,15 +82,11 @@ func (a Article) ToDomain() rss.Article {
 	}
 
 	return rss.Article{
-		ID:     a.ID,
-		Title:  a.Title,
-		URL:    a.URL,
-		Images: images,
-		Feed: rss.Feed{
-			ID:   a.Feed.ID,
-			Name: a.Feed.Name,
-			URL:  a.Feed.URL,
-		},
+		ID:          a.ID,
+		Title:       a.Title,
+		URL:         a.URL,
+		Images:      images,
+		Feed:        a.Feed.ToDomain(),
 		PublishedAt: a.PublishedAt,
 	}
 }
