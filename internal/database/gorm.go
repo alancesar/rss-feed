@@ -31,6 +31,16 @@ func (g Gorm) SaveFeed(ctx context.Context, feed rss.Feed) error {
 	return nil
 }
 
+func (g Gorm) SaveArticle(ctx context.Context, feedID string, article rss.Article) error {
+	zerolog.Ctx(ctx).Info().Str("feed_id", feedID).Str("article_title", article.Title).Msg("saving article to database")
+	m := model.NewArticleFromDomain(article, feedID)
+	if err := g.db.WithContext(ctx).Save(&m).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (g Gorm) GetArticlesFromDate(ctx context.Context, date time.Time) ([]rss.Article, error) {
 	var articles []model.Article
 	if err := g.db.WithContext(ctx).

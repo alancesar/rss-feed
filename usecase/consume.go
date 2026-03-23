@@ -9,17 +9,17 @@ import (
 )
 
 type (
-	FeedStore interface {
-		SaveFeed(context.Context, rss.Feed) error
+	ArticleStore interface {
+		SaveArticle(context.Context, string, rss.Article) error
 	}
 
 	ConsumeFeed struct {
-		store     FeedStore
+		store     ArticleStore
 		publisher Publisher
 	}
 )
 
-func NewConsumeFeed(store FeedStore, publisher Publisher) *ConsumeFeed {
+func NewConsumeFeed(store ArticleStore, publisher Publisher) *ConsumeFeed {
 	return &ConsumeFeed{
 		store:     store,
 		publisher: publisher,
@@ -30,19 +30,12 @@ func (uc ConsumeFeed) Execute(ctx context.Context, e event.Feed) error {
 	log := zerolog.Ctx(ctx)
 	feed := e.ToDomain()
 
-	feed := rss.Feed{
-		ID:       e.FeedID,
-		Name:     e.Name,
-		URL:      e.URL,
-		Articles: articles,
-	}
-
-	log.Info().Str("feed", feed.Name).Int("articles", len(articles)).Msg("saving feed")
-	if err := uc.store.SaveFeed(ctx, feed); err != nil {
-		return err
-	}
-
+	log.Info().Str("feed", feed.Name).Int("articles", len(feed.Articles)).Msg("saving feed")
 	for _, article := range e.Articles {
+		if err := uc.store.SaveArticle(ctx, feed.ID, article.ToDomain()); err != nil {
+			return err
+		}
+
 		if article.Image.ImageID == "" {
 			continue
 		}
