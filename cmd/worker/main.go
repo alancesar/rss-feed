@@ -59,14 +59,19 @@ func main() {
 	}()
 
 	rabbitMQ := queue.NewRabbitMQ(conn)
-	feedConsumer, err := rabbitMQ.NewConsumer("rss.feed.article.found")
+	feedSubscriber, err := rabbitMQ.NewSubscriber()
 	if err != nil {
-		log.Fatal().Err(err).Msg("creating rss.feed.article.found consumer")
+		log.Fatal().Err(err).Msg("creating rabbitmq subscriber")
 	}
 
-	imagesConsumer, err := rabbitMQ.NewConsumer("rss.feed.article.image.found")
+	imageSubscriber, err := rabbitMQ.NewSubscriber()
 	if err != nil {
-		log.Fatal().Err(err).Msg("creating rss.feed.article.image.found consumer")
+		log.Fatal().Err(err).Msg("creating rabbitmq subscriber")
+	}
+
+	jobsConsumer, err := rabbitMQ.NewSubscriber()
+	if err != nil {
+		log.Fatal().Err(err).Msg("creating rss.feed.jobs consumer")
 	}
 
 	imagePublisher, err := rabbitMQ.NewPublisher("rss")
@@ -74,8 +79,8 @@ func main() {
 		log.Fatal().Err(err).Msg("creating rabbitmq publisher")
 	}
 
-	consumeFeedUseCase := usecase.NewConsumeFeed(sqliteDatabase, imagePublisher)
-	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, s3Storage, sqliteDatabase)
+	consumeFeedUseCase := usecase.NewConsumeFeed(sqliteDatabase, feedSubscriber, imagePublisher)
+	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, imageSubscriber, s3Storage, sqliteDatabase)
 	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), imagePublisher)
 
 	updateInterval := 30 * time.Minute
@@ -89,57 +94,49 @@ func main() {
 
 	forceUpdate := make(chan struct{}, 1)
 
-	jobsConsumer, err := rabbitMQ.NewConsumer("rss.feed.jobs")
-	if err != nil {
-		log.Fatal().Err(err).Msg("creating rss.feed.jobs consumer")
-	}
-
 	log.Info().Msg("worker started")
 
 	go func() {
-		if err := feedConsumer.Consume(ctx, func(ctx context.Context, body []byte) error {
-			var e event.Feed
-			if err := json.Unmarshal(body, &e); err != nil {
-				return err
-			}
-
-			return consumeFeedUseCase.Execute(ctx, e)
-		}); err != nil {
+		if err := consumeFeedUseCase.Execute(ctx); err != nil {
 			log.Fatal().Err(err).Msg("consuming rss.feed.article.found events")
 		}
 	}()
 
 	go func() {
-		if err := imagesConsumer.Consume(ctx, func(ctx context.Context, body []byte) error {
-			var e event.Image
-			if err := json.Unmarshal(body, &e); err != nil {
-				return err
-			}
-
-			return consumeImageUseCase.Execute(ctx, e)
-		}); err != nil {
-			log.Fatal().Err(err).Msg("consuming rss.feed.article.image.found events")
+		if err := consumeImageUseCase.Execute(ctx); err != nil {
+			log.Fatal().Err(err).Msg("consuming rss.feed.article.image events")
 		}
 	}()
 
 	go func() {
-		if err := jobsConsumer.Consume(ctx, func(_ context.Context, body []byte) error {
+		deliveries, err := jobsConsumer.Subscribe(ctx, "rss.feed.jobs")
+		if err != nil {
+			log.Fatal().Err(err).Msg("consuming rss.feed.jobs events")
+		}
+
+		for delivery := range deliveries {
 			var j event.Job
-			if err := json.Unmarshal(body, &j); err != nil {
-				return err
+			if err := json.Unmarshal(delivery.Payload, &j); err != nil {
+				log.Error().Err(err).Msg("unmarshalling rss.feed.job event")
+				if err := delivery.Nack(false); err != nil {
+					log.Error().Err(err).Msg("failed to nack delivery")
+				}
+				continue
 			}
 
-			if j.Command == event.CommandUpdateFeeds {
+			switch j.Command {
+			case event.CommandUpdateFeeds:
 				select {
 				case forceUpdate <- struct{}{}:
 				default:
 				}
 			}
 
-			return nil
-		}); err != nil {
-			log.Fatal().Err(err).Msg("consuming rss.feed.jobs events")
+			if err := delivery.Ack(); err != nil {
+				log.Error().Err(err).Msg("failed to ack delivery")
+			}
 		}
+
 	}()
 
 	log.Info().Dur("interval", updateInterval).Msg("starting feed update ticker")

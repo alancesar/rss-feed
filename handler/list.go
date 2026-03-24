@@ -25,7 +25,7 @@ func GetFromDate(uc *usecase.ReadArticles) http.HandlerFunc {
 		rawDate := r.URL.Query().Get("date")
 		date, err := time.Parse(time.DateOnly, rawDate)
 		if err != nil {
-			http.Error(w, "invalid date param. it must be in YYYY-MM-DD pattern", http.StatusInternalServerError)
+			http.Error(w, "invalid date param. it must be in YYYY-MM-DD pattern", http.StatusBadRequest)
 			return
 		}
 

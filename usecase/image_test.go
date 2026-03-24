@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"rss-feed/pkg/event"
-	"rss-feed/pkg/rss"
 	"rss-feed/usecase"
 )
 
@@ -17,17 +16,8 @@ func TestConsumeImage_Execute(t *testing.T) {
 
 	now := today()
 
-	if err := db.CreateFeed(ctx, rss.Feed{ID: "feed-abc", Name: "Test Blog", URL: "https://example.com/feed.xml"}); err != nil {
-		t.Fatalf("creating feed: %v", err)
-	}
-	if err := db.SaveArticle(ctx, "feed-abc", rss.Article{
-		ID:          "article-1",
-		Title:       "First Post",
-		URL:         "https://example.com/post-1",
-		PublishedAt: now,
-	}); err != nil {
-		t.Fatalf("saving article: %v", err)
-	}
+	createTestFeed(t, ctx, db)
+	saveTestArticle(t, ctx, db, now)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/jpeg")
@@ -41,8 +31,9 @@ func TestConsumeImage_Execute(t *testing.T) {
 		URL:       srv.URL + "/image.jpg",
 	}
 
-	uc := usecase.NewConsumeImage(http.DefaultClient, &mockStorage{}, db)
-	if err := uc.Execute(ctx, imgEvent); err != nil {
+	subscriber := &mockSubscriber{messages: []any{imgEvent}}
+	uc := usecase.NewConsumeImage(http.DefaultClient, subscriber, &mockStorage{}, db)
+	if err := uc.Execute(ctx); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 

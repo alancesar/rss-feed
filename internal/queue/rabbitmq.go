@@ -13,16 +13,14 @@ type (
 		conn *amqp.Connection
 	}
 
-	Handler func(context.Context, []byte) error
-
 	RabbitMQPublisher struct {
 		channel  *amqp.Channel
 		exchange string
 	}
 
-	RabbitMQConsumer struct {
-		channel *amqp.Channel
-		queue   string
+	RabbitMQSubscriber struct {
+		channel    *amqp.Channel
+		deliveries chan event.Delivery
 	}
 )
 
@@ -44,19 +42,23 @@ func (r RabbitMQ) NewPublisher(exchange string) (*RabbitMQPublisher, error) {
 	}, nil
 }
 
-func (r RabbitMQ) NewConsumer(queue string) (*RabbitMQConsumer, error) {
+func (r RabbitMQ) NewSubscriber() (*RabbitMQSubscriber, error) {
 	ch, err := r.conn.Channel()
 	if err != nil {
 		return nil, err
 	}
 
-	return &RabbitMQConsumer{
-		channel: ch,
-		queue:   queue,
+	return &RabbitMQSubscriber{
+		channel:    ch,
+		deliveries: make(chan event.Delivery),
 	}, nil
 }
 
-func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.Event) error {
+func (r RabbitMQ) Close() error {
+	return r.conn.Close()
+}
+
+func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.Message) error {
 	body, err := json.Marshal(e.Payload)
 	if err != nil {
 		return err
@@ -72,23 +74,33 @@ func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.E
 	return err
 }
 
-func (c RabbitMQConsumer) Consume(ctx context.Context, handler Handler) error {
-	defer func() {
-		_ = c.channel.Close()
+func (c RabbitMQSubscriber) Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error) {
+	deliveries, err := c.channel.ConsumeWithContext(ctx, queue, "", false, false, false, false, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		for delivery := range deliveries {
+			c.deliveries <- event.Delivery{
+				Message: event.Message{
+					Headers: delivery.Headers,
+					Payload: delivery.Body,
+				},
+				Ack: func() error {
+					return delivery.Ack(false)
+				},
+				Nack: func(requeue bool) error {
+					return delivery.Nack(false, requeue)
+				},
+			}
+		}
 	}()
 
-	deliveries, err := c.channel.ConsumeWithContext(ctx, c.queue, "", false, false, false, false, nil)
-	if err != nil {
-		return err
-	}
+	return c.deliveries, nil
+}
 
-	for delivery := range deliveries {
-		if err := handler(ctx, delivery.Body); err != nil {
-			_ = delivery.Nack(false, true)
-		} else {
-			_ = delivery.Ack(false)
-		}
-	}
-
-	return nil
+func (c RabbitMQSubscriber) Close() error {
+	close(c.deliveries)
+	return c.channel.Close()
 }

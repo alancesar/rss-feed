@@ -49,4 +49,4 @@ func (m *mockFeedStore) CreateFeed(_ context.Context, _ rss.Feed) error {
 	return nil
 }
 
-func (m *mockPublisher) Publish(_ context.Context, _ string, _ event.Event) error { return nil }
+func (m *mockPublisher) Publish(_ context.Context, _ string, _ event.Message) error { return nil }

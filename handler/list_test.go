@@ -21,8 +21,8 @@ func TestGetFromDate_InvalidDate(t *testing.T) {
 
 	handler.GetFromDate(uc)(w, r)
 
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
 	}
 }
 

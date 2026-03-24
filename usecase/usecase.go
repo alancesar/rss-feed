@@ -6,8 +6,13 @@ import (
 )
 
 type (
+	Subscriber interface {
+		Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error)
+		Close() error
+	}
+
 	Publisher interface {
-		Publish(ctx context.Context, topic string, e event.Event) error
+		Publish(ctx context.Context, topic string, e event.Message) error
 	}
 
 	FeedFetcher interface {
