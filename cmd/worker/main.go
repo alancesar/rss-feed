@@ -8,10 +8,12 @@ import (
 	"net/url"
 	"os"
 	"rss-feed/internal/database"
+	"rss-feed/internal/feed"
 	"rss-feed/internal/queue"
 	"rss-feed/internal/storage"
 	"rss-feed/pkg/event"
 	"rss-feed/usecase"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
@@ -74,6 +76,16 @@ func main() {
 
 	consumeFeedUseCase := usecase.NewConsumeFeed(sqliteDatabase, imagePublisher)
 	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, s3Storage, sqliteDatabase)
+	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), imagePublisher)
+
+	updateInterval := 30 * time.Minute
+	if v := os.Getenv("UPDATE_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			updateInterval = d
+		} else {
+			log.Warn().Str("value", v).Msg("invalid UPDATE_INTERVAL, using default 30m")
+		}
+	}
 
 	log.Info().Msg("worker started")
 
@@ -90,14 +102,30 @@ func main() {
 		}
 	}()
 
-	if err := imagesConsumer.Consume(ctx, func(ctx context.Context, body []byte) error {
-		var e event.Image
-		if err := json.Unmarshal(body, &e); err != nil {
-			return err
-		}
+	go func() {
+		if err := imagesConsumer.Consume(ctx, func(ctx context.Context, body []byte) error {
+			var e event.Image
+			if err := json.Unmarshal(body, &e); err != nil {
+				return err
+			}
 
-		return consumeImageUseCase.Execute(ctx, e)
-	}); err != nil {
-		log.Fatal().Err(err).Msg("consuming rss.feed.article.image.found events")
+			return consumeImageUseCase.Execute(ctx, e)
+		}); err != nil {
+			log.Fatal().Err(err).Msg("consuming rss.feed.article.image.found events")
+		}
+	}()
+
+	log.Info().Dur("interval", updateInterval).Msg("starting feed update ticker")
+	if err := updateFeedsUseCase.Execute(ctx); err != nil {
+		log.Error().Err(err).Msg("updating feeds")
+	}
+
+	ticker := time.NewTicker(updateInterval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if err := updateFeedsUseCase.Execute(ctx); err != nil {
+			log.Error().Err(err).Msg("updating feeds")
+		}
 	}
 }
