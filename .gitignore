@@ -1,5 +1,7 @@
 .idea
 /bin
+/api
+/worker
 docs
 rss.sqlite
 .env

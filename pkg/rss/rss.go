@@ -22,10 +22,11 @@ type (
 	ImageType string
 
 	Feed struct {
-		ID       string
-		Name     string
-		URL      string
-		Articles []Article
+		ID        string
+		Name      string
+		URL       string
+		Articles  []Article
+		UpdatedAt time.Time
 	}
 
 	Image struct {
@@ -43,6 +44,10 @@ type (
 		PublishedAt time.Time
 	}
 )
+
+func (f *Feed) Touch() {
+	f.UpdatedAt = time.Now().UTC()
+}
 
 func NewImage(path string, imgType ImageType) Image {
 	return Image{

@@ -100,6 +100,7 @@ func main() {
 
 	r.Route("/feeds", func(r chi.Router) {
 		r.Post("/", handler.AddFeed(saveFeedUseCase))
+		r.Post("/update", handler.TriggerFeedUpdate(publisher))
 	})
 
 	r.Get("/swagger/*", httpSwagger.WrapHandler)

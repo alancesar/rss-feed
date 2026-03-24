@@ -69,18 +69,22 @@ func (g Gorm) GetArticlesFromDate(ctx context.Context, date time.Time) ([]rss.Ar
 	return result, nil
 }
 
-func (g Gorm) GetAllFeedURLs(ctx context.Context) ([]string, error) {
+func (g Gorm) GetAllFeeds(ctx context.Context) ([]rss.Feed, error) {
 	var feeds []model.Feed
 	if err := g.db.WithContext(ctx).Find(&feeds).Error; err != nil {
 		return nil, err
 	}
 
-	urls := make([]string, len(feeds))
-	for i, feed := range feeds {
-		urls[i] = feed.URL
+	result := make([]rss.Feed, len(feeds))
+	for i, f := range feeds {
+		result[i] = f.ToDomain()
 	}
+	return result, nil
+}
 
-	return urls, nil
+func (g Gorm) UpdateFeed(ctx context.Context, feed rss.Feed) error {
+	m := model.NewFeedFromDomain(feed)
+	return g.db.WithContext(ctx).Save(&m).Error
 }
 
 func (g Gorm) SaveImage(ctx context.Context, articleID string, img rss.Image) error {
