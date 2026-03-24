@@ -58,7 +58,7 @@ Responses include `image_url` as a presigned S3 URL (1h TTL), generated at read 
 - `SaveFeed` — checks for duplicates, persists feed to DB, then publishes a `feed.article.found` event to RabbitMQ
 - `ConsumeFeed` — saves each article to DB, publishes `feed.article.image.found` per article with image
 - `ConsumeImage` — downloads image, uploads to S3, saves image record to DB
-- `UpdateFeeds` — iterates all stored feed URLs, fetches each and publishes `feed.article.found` events
+- `UpdateFeeds` — retrieves all stored feeds, fetches each, publishes `feed.article.found` events, then calls `feed.Touch()` and persists the updated domain entity back to DB
 - `ReadArticles` — queries articles by date and presigns image URLs
 
 ## Database
@@ -100,6 +100,7 @@ go generate ./...  # same as make docs — regenerate Swagger docs via go:genera
 - `Article.Images []Image` — an article can have multiple images (original, thumbnail types defined)
 - Image paths are derived at upload time from article ID + file extension (not stored as a template)
 - CORS allows all localhost origins regardless of port
+- Do not put domain logic outside `pkg` entities — mutations like `Touch()` belong on the domain struct itself, not in the repository or use case layer
 
 ## Testing Convention
 

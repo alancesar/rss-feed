@@ -3,13 +3,15 @@ package usecase
 import (
 	"context"
 	"rss-feed/pkg/event"
+	"rss-feed/pkg/rss"
 
 	"github.com/rs/zerolog"
 )
 
 type (
 	FeedsStore interface {
-		GetAllFeedURLs(ctx context.Context) ([]string, error)
+		GetAllFeeds(ctx context.Context) ([]rss.Feed, error)
+		UpdateFeed(ctx context.Context, feed rss.Feed) error
 	}
 
 	UpdateFeeds struct {
@@ -28,28 +30,33 @@ func NewUpdateFeeds(store FeedsStore, fetcher FeedFetcher, publisher Publisher) 
 }
 
 func (uc UpdateFeeds) Execute(ctx context.Context) error {
-	urls, err := uc.store.GetAllFeedURLs(ctx)
+	feeds, err := uc.store.GetAllFeeds(ctx)
 	if err != nil {
 		return err
 	}
 
 	log := zerolog.Ctx(ctx)
-	for _, url := range urls {
-		log.Info().Str("url", url).Msg("fetching feed")
-		feed, err := uc.fetcher.Fetch(ctx, url)
+	for _, feed := range feeds {
+		log.Info().Str("url", feed.URL).Msg("fetching feed")
+		fetchedFeed, err := uc.fetcher.Fetch(ctx, feed.URL)
 		if err != nil {
-			log.Error().Err(err).Str("url", url).Msg("failed to fetch feed")
+			log.Error().Err(err).Str("url", feed.URL).Msg("failed to fetch feed")
 			continue
 		}
 
-		log.Info().Str("feed", feed.Name).Int("articles", len(feed.Articles)).Msg("publishing feed.article.found event")
+		log.Info().Str("feed", fetchedFeed.Name).Int("articles", len(fetchedFeed.Articles)).Msg("publishing feed.article.found event")
 		if err := uc.publisher.Publish(ctx, "feed.article.found", event.Event{
-			Payload: feed,
+			Payload: fetchedFeed,
 		}); err != nil {
 			return err
 		}
 
-		log.Info().Str("name", feed.Name).Str("url", url).Msg("feed fetched")
+		feed.Touch()
+		if err := uc.store.UpdateFeed(ctx, feed); err != nil {
+			return err
+		}
+
+		log.Info().Str("name", fetchedFeed.Name).Str("url", feed.URL).Msg("feed fetched")
 	}
 
 	return nil

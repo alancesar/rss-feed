@@ -12,6 +12,7 @@ type (
 		URL       string
 		Articles  []Article `gorm:"foreignKey:FeedID;references:ID"`
 		CreatedAt time.Time
+		UpdatedAt time.Time
 	}
 
 	Article struct {
@@ -41,10 +42,11 @@ func NewFeedFromDomain(feed rss.Feed) Feed {
 	}
 
 	return Feed{
-		ID:       feed.ID,
-		Name:     feed.Name,
-		URL:      feed.URL,
-		Articles: articles,
+		ID:        feed.ID,
+		Name:      feed.Name,
+		URL:       feed.URL,
+		Articles:  articles,
+		UpdatedAt: feed.UpdatedAt,
 	}
 }
 
@@ -69,9 +71,10 @@ func NewImageFromDomain(image rss.Image, articleID string) Image {
 
 func (s Feed) ToDomain() rss.Feed {
 	return rss.Feed{
-		ID:   s.ID,
-		Name: s.Name,
-		URL:  s.URL,
+		ID:        s.ID,
+		Name:      s.Name,
+		URL:       s.URL,
+		UpdatedAt: s.UpdatedAt,
 	}
 }
 
