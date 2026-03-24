@@ -21,9 +21,9 @@ type (
 	}
 
 	RabbitMQSubscriber struct {
-		channel  *amqp.Channel
-		queue    string
-		messages chan event.Delivery
+		channel    *amqp.Channel
+		queue      string
+		deliveries chan event.Delivery
 	}
 )
 
@@ -52,9 +52,9 @@ func (r RabbitMQ) NewSubscriber(queue string) (*RabbitMQSubscriber, error) {
 	}
 
 	return &RabbitMQSubscriber{
-		channel:  ch,
-		queue:    queue,
-		messages: make(chan event.Delivery),
+		channel:    ch,
+		queue:      queue,
+		deliveries: make(chan event.Delivery),
 	}, nil
 }
 
@@ -86,9 +86,11 @@ func (c RabbitMQSubscriber) Subscribe(ctx context.Context, queue string) (<-chan
 
 	go func() {
 		for delivery := range deliveries {
-			c.messages <- event.Delivery{
-				Headers: delivery.Headers,
-				Payload: delivery.Body,
+			c.deliveries <- event.Delivery{
+				Message: event.Message{
+					Headers: delivery.Headers,
+					Payload: delivery.Body,
+				},
 				Ack: func() error {
 					return delivery.Ack(false)
 				},
@@ -99,7 +101,7 @@ func (c RabbitMQSubscriber) Subscribe(ctx context.Context, queue string) (<-chan
 		}
 	}()
 
-	return c.messages, nil
+	return c.deliveries, nil
 }
 
 func (c RabbitMQSubscriber) Consume(ctx context.Context, handler Handler) error {
@@ -124,6 +126,6 @@ func (c RabbitMQSubscriber) Consume(ctx context.Context, handler Handler) error 
 }
 
 func (c RabbitMQSubscriber) Close() error {
-	close(c.messages)
+	close(c.deliveries)
 	return c.channel.Close()
 }
