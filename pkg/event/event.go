@@ -7,9 +7,8 @@ type (
 	}
 
 	Delivery struct {
-		Payload []byte
-		Headers map[string]interface{}
-		Ack     func() error
-		Nack    func(requeue bool) error
+		Message
+		Ack  func() error
+		Nack func(requeue bool) error
 	}
 )
