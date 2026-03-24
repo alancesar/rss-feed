@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"rss-feed/pkg/event"
-	"rss-feed/pkg/rss"
 	"rss-feed/usecase"
 )
 
@@ -13,9 +12,7 @@ func TestConsumeFeed_Execute(t *testing.T) {
 	ctx := context.Background()
 	db := newTestDB(t)
 
-	if err := db.CreateFeed(ctx, rss.Feed{ID: "feed-abc", Name: "Test Blog", URL: "https://example.com/feed.xml"}); err != nil {
-		t.Fatalf("creating feed: %v", err)
-	}
+	createTestFeed(t, ctx, db)
 
 	now := today()
 	feedEvent := event.Feed{
@@ -39,8 +36,9 @@ func TestConsumeFeed_Execute(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewConsumeFeed(db, &mockPublisher{})
-	if err := uc.Execute(ctx, feedEvent); err != nil {
+	subscriber := &mockSubscriber{messages: []any{feedEvent}}
+	uc := usecase.NewConsumeFeed(db, subscriber, &mockPublisher{})
+	if err := uc.Execute(ctx); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 

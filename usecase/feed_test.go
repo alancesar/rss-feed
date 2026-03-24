@@ -53,9 +53,7 @@ func TestSaveFeed_Execute_Duplicate(t *testing.T) {
 	ctx := context.Background()
 	db := newTestDB(t)
 
-	if err := db.CreateFeed(ctx, rss.Feed{ID: "feed-abc", Name: "Test Blog", URL: "https://example.com/feed.xml"}); err != nil {
-		t.Fatalf("creating feed: %v", err)
-	}
+	createTestFeed(t, ctx, db)
 
 	uc := usecase.NewSaveFeed(&mockFetcher{}, db, &mockPublisher{})
 	_, err := uc.Execute(ctx, "https://example.com/feed.xml")
