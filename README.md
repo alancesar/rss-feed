@@ -96,6 +96,14 @@ Response `200 OK`:
 
 The `date` parameter must follow the `YYYY-MM-DD` format. `published_at` is an RFC3339 timestamp.
 
+### Trigger a feed update
+
+```
+POST /feeds/update
+```
+
+Publishes a job event to the `rss.feed.jobs` queue. The worker picks it up and immediately re-fetches all registered feeds, the same as the periodic ticker but on demand.
+
 ### Swagger UI
 
 Interactive docs available at `/swagger/index.html` once the server is running. To regenerate after changing annotations:
@@ -106,9 +114,9 @@ make docs
 
 ## How it works
 
-When a feed is added, the API publishes an event to RabbitMQ. The worker picks it up, saves the articles to SQLite, and publishes a separate event for each article image. A second worker consumer downloads the image, uploads it to S3, and records its path in the database. Image URLs in API responses point directly to S3.
+When a feed is added, the API publishes an event to RabbitMQ. The worker picks it up, saves the articles to SQLite, and publishes a separate event for each article image. A second worker consumer downloads the image, uploads it to S3, and records its path in the database. Image URLs in API responses are presigned S3 URLs (1h TTL) generated at read time.
 
-The worker also runs a background ticker (default every 30 minutes, overridable via `UPDATE_INTERVAL`) that re-triggers this pipeline for every feed already in the database.
+The worker also runs a background ticker (default every 30 minutes, overridable via `UPDATE_INTERVAL`) that re-triggers this pipeline for every feed already in the database. `POST /feeds/update` triggers the same re-fetch immediately without waiting for the next tick.
 
 ## RabbitMQ setup
 

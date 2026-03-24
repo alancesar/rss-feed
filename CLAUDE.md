@@ -31,13 +31,13 @@ cmd/worker (ticker: every UPDATE_INTERVAL, default 30m)
                     └─► feed.Touch() → UpdateFeed to SQLite
 
 cmd/worker (consumer 1: "rss.feed.article.found")
-    └─► ConsumeFeed.Execute(event.Feed)
+    └─► ConsumeFeed.Execute(ctx)
             └─► for each article: SaveArticle to SQLite
             └─► for each article with image:
                     └─► RabbitMQ publish → "rss.feed.article.image.found"
 
 cmd/worker (consumer 2: "rss.feed.article.image.found")
-    └─► ConsumeImage.Execute(event.Image)
+    └─► ConsumeImage.Execute(ctx)
             └─► HTTP GET original image URL
             └─► Upload to S3 at images/original/{article_id}.{ext}
             └─► SaveImage to SQLite
@@ -52,7 +52,7 @@ cmd/worker (consumer 2: "rss.feed.article.image.found")
 | `POST` | `/feeds`                    | Add a new RSS feed source          |
 | `POST` | `/feeds/update`             | Trigger an immediate feed re-fetch |
 
-Responses include `image_url` as a presigned S3 URL (1h TTL), generated at read time by `ReadArticles`.
+Responses include presigned S3 URLs (1h TTL) nested under `images[].url`, generated at read time by `ReadArticles`.
 
 ## Use Cases
 
@@ -127,6 +127,9 @@ When multiple types belong to the same file, they should all be declared inside 
 
 - Tests that interact with the database must use a real SQLite instance (via `newTestDB` in `usecase/integration_test.go`) — never mock the database
 - Every new method must have a corresponding test; write the test alongside the implementation (TDD-like)
+- Reuse the shared test helpers in `usecase/integration_test.go` when setting up common fixtures:
+  - `createTestFeed(t, ctx, db)` — inserts a default feed (`feed-abc`, "Test Blog")
+  - `saveTestArticle(t, ctx, db, publishedAt)` — inserts a default article (`article-1`, "First Post") under `feed-abc`
 
 ## Domain Binding Convention
 
