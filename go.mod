@@ -12,6 +12,7 @@ require (
 	github.com/go-chi/render v1.0.3
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/rabbitmq/amqp091-go v1.10.0
+	github.com/rs/zerolog v1.34.0
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.6
 	gorm.io/driver/sqlite v1.6.0
@@ -54,7 +55,6 @@ require (
 	github.com/mmcdole/goxpp v1.1.1-0.20240225020742-a0c311522b23 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/rs/zerolog v1.34.0 // indirect
 	github.com/swaggo/files v1.0.1 // indirect
 	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/net v0.44.0 // indirect
