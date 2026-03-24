@@ -46,13 +46,13 @@ func (uc ConsumeImage) Execute(ctx context.Context, e event.Image) error {
 		return err
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return err
-	}
-
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return err
+	}
 
 	u, err := url.Parse(e.URL)
 	if err != nil {
