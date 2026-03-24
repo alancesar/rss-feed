@@ -17,18 +17,18 @@ internal/feed     → RSS feed fetcher (gofeed) — emits event.Feed
 internal/queue    → RabbitMQ publisher and consumer
 internal/storage  → S3-compatible object storage (upload + presign)
 cmd/api/          → REST API server (default port 8080, overridable via PORT env)
-cmd/update/       → CLI tool: reads all feed URLs from DB and triggers re-fetch
-cmd/worker/       → Long-running worker: consumes RabbitMQ events and processes feeds/images
+cmd/worker/       → Long-running worker: consumes RabbitMQ events, processes feeds/images, and periodically triggers feed re-fetch (default every 30m, overridable via UPDATE_INTERVAL)
 ```
 
 ## Async Processing Flow
 
 ```
-cmd/update
+cmd/worker (ticker: every UPDATE_INTERVAL, default 30m)
     └─► UpdateFeeds.Execute()
-            └─► for each url:
+            └─► for each feed:
                     └─► fetcher.Fetch() → event.Feed
                     └─► RabbitMQ publish → "rss.feed.article.found"
+                    └─► feed.Touch() → UpdateFeed to SQLite
 
 cmd/worker (consumer 1: "rss.feed.article.found")
     └─► ConsumeFeed.Execute(event.Feed)
@@ -50,6 +50,7 @@ cmd/worker (consumer 2: "rss.feed.article.image.found")
 | `GET`  | `/articles/today`           | List articles published today      |
 | `GET`  | `/articles?date=YYYY-MM-DD` | List articles from a specific date |
 | `POST` | `/feeds`                    | Add a new RSS feed source          |
+| `POST` | `/feeds/update`             | Trigger an immediate feed re-fetch |
 
 Responses include `image_url` as a presigned S3 URL (1h TTL), generated at read time by `ReadArticles`.
 
@@ -69,7 +70,7 @@ Three tables: `feeds`, `articles`, `images` (`images` has a FK to `articles`, st
 
 ## Infrastructure
 
-- **RabbitMQ** — exchange `rss`, queues `rss.feed.article.found` and `rss.feed.article.image.found`
+- **RabbitMQ** — exchange `rss`, queues `rss.feed.article.found`, `rss.feed.article.image.found`, and `rss.feed.jobs`
 - **S3-compatible storage** — configured via `storage.NewS3(endpoint, region, bucket)`; images stored under `images/original/`
 - **Presigned URLs** — generated on read with 1h TTL
 
@@ -87,11 +88,31 @@ Three tables: `feeds`, `articles`, `images` (`images` has a FK to `articles`, st
 
 ```bash
 make docs          # regenerate Swagger docs (swag init)
-make build         # compile binaries to ./bin/api, ./bin/update, ./bin/worker
+make build         # compile binaries to ./bin/api, ./bin/worker
 make start         # start the API server via go run
-make update        # run the feed sync CLI via go run
+make worker        # start the worker via go run
 go generate ./...  # same as make docs — regenerate Swagger docs via go:generate directive
 ```
+
+## Type Declaration Convention
+
+All struct and type declarations must use the grouped `type ( ... )` syntax, even for a single type:
+
+```go
+// correct
+type (
+    Foo struct {
+        Bar string
+    }
+)
+
+// incorrect
+type Foo struct {
+    Bar string
+}
+```
+
+When multiple types belong to the same file, they should all be declared inside a single `type ( ... )` block at the top of the file.
 
 ## Design Notes
 
