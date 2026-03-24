@@ -12,11 +12,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-type S3 struct {
-	client *s3.PresignClient
-	tm     *transfermanager.Client
-	bucket string
-}
+type (
+	S3 struct {
+		client *s3.PresignClient
+		tm     *transfermanager.Client
+		bucket string
+	}
+)
 
 func NewS3(endpoint, region, bucket string) (*S3, error) {
 	cfg, err := config.LoadDefaultConfig(context.Background(),
