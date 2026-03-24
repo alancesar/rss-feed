@@ -54,7 +54,7 @@ func (uc SaveFeed) Execute(ctx context.Context, url string) (rss.Feed, error) {
 	}
 
 	log.Info().Str("feed", fetchedFeed.Name).Int("articles", len(fetchedFeed.Articles)).Msg("publishing feed.article.found event")
-	if err := uc.publisher.Publish(ctx, "feed.article.found", event.Event{
+	if err := uc.publisher.Publish(ctx, "feed.article.found", event.Message{
 		Payload: fetchedFeed,
 	}); err != nil {
 		return rss.Feed{}, err

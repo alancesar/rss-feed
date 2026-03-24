@@ -20,10 +20,10 @@ type (
 		exchange string
 	}
 
-	RabbitMQConsumer struct {
+	RabbitMQSubscriber struct {
 		channel  *amqp.Channel
 		queue    string
-		messages chan event.Message
+		messages chan event.Delivery
 	}
 )
 
@@ -45,16 +45,16 @@ func (r RabbitMQ) NewPublisher(exchange string) (*RabbitMQPublisher, error) {
 	}, nil
 }
 
-func (r RabbitMQ) NewConsumer(queue string) (*RabbitMQConsumer, error) {
+func (r RabbitMQ) NewSubscriber(queue string) (*RabbitMQSubscriber, error) {
 	ch, err := r.conn.Channel()
 	if err != nil {
 		return nil, err
 	}
 
-	return &RabbitMQConsumer{
+	return &RabbitMQSubscriber{
 		channel:  ch,
 		queue:    queue,
-		messages: make(chan event.Message),
+		messages: make(chan event.Delivery),
 	}, nil
 }
 
@@ -62,7 +62,7 @@ func (r RabbitMQ) Close() error {
 	return r.conn.Close()
 }
 
-func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.Event) error {
+func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.Message) error {
 	body, err := json.Marshal(e.Payload)
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.E
 	return err
 }
 
-func (c RabbitMQConsumer) Subscribe(ctx context.Context, queue string) (<-chan event.Message, error) {
+func (c RabbitMQSubscriber) Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error) {
 	deliveries, err := c.channel.ConsumeWithContext(ctx, queue, "", false, false, false, false, nil)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (c RabbitMQConsumer) Subscribe(ctx context.Context, queue string) (<-chan e
 
 	go func() {
 		for delivery := range deliveries {
-			c.messages <- event.Message{
+			c.messages <- event.Delivery{
 				Headers: delivery.Headers,
 				Payload: delivery.Body,
 				Ack: func() error {
@@ -102,7 +102,7 @@ func (c RabbitMQConsumer) Subscribe(ctx context.Context, queue string) (<-chan e
 	return c.messages, nil
 }
 
-func (c RabbitMQConsumer) Consume(ctx context.Context, handler Handler) error {
+func (c RabbitMQSubscriber) Consume(ctx context.Context, handler Handler) error {
 	defer func() {
 		_ = c.channel.Close()
 	}()
@@ -123,7 +123,7 @@ func (c RabbitMQConsumer) Consume(ctx context.Context, handler Handler) error {
 	return nil
 }
 
-func (c RabbitMQConsumer) Close() error {
+func (c RabbitMQSubscriber) Close() error {
 	close(c.messages)
 	return c.channel.Close()
 }

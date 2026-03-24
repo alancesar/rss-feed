@@ -1,12 +1,12 @@
 package event
 
 type (
-	Event struct {
+	Message struct {
 		Payload any
 		Headers map[string]interface{}
 	}
 
-	Message struct {
+	Delivery struct {
 		Payload []byte
 		Headers map[string]interface{}
 		Ack     func() error

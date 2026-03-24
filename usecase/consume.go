@@ -41,7 +41,7 @@ func (uc ConsumeFeed) Execute(ctx context.Context, e event.Feed) error {
 		}
 
 		log.Info().Str("article_id", article.ArticleID).Msg("publishing image event")
-		if err := uc.publisher.Publish(ctx, "feed.article.image.found", event.Event{
+		if err := uc.publisher.Publish(ctx, "feed.article.image.found", event.Message{
 			Payload: article.Image,
 		}); err != nil {
 			return err

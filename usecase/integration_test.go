@@ -55,7 +55,7 @@ type (
 	mockImageStorage struct{}
 )
 
-func (m *mockPublisher) Publish(_ context.Context, _ string, _ event.Event) error { return nil }
+func (m *mockPublisher) Publish(_ context.Context, _ string, _ event.Message) error { return nil }
 
 func (m *mockFetcher) Fetch(_ context.Context, _ string) (event.Feed, error) {
 	return m.feed, nil

@@ -59,12 +59,12 @@ func main() {
 	}()
 
 	rabbitMQ := queue.NewRabbitMQ(conn)
-	feedConsumer, err := rabbitMQ.NewConsumer("rss.feed.article.found")
+	feedConsumer, err := rabbitMQ.NewSubscriber("rss.feed.article.found")
 	if err != nil {
 		log.Fatal().Err(err).Msg("creating rss.feed.article.found consumer")
 	}
 
-	imagesConsumer, err := rabbitMQ.NewConsumer("rss.feed.article.image.found")
+	imagesConsumer, err := rabbitMQ.NewSubscriber("rss.feed.article.image.found")
 	if err != nil {
 		log.Fatal().Err(err).Msg("creating rss.feed.article.image.found consumer")
 	}
@@ -89,7 +89,7 @@ func main() {
 
 	forceUpdate := make(chan struct{}, 1)
 
-	jobsConsumer, err := rabbitMQ.NewConsumer("rss.feed.jobs")
+	jobsConsumer, err := rabbitMQ.NewSubscriber("rss.feed.jobs")
 	if err != nil {
 		log.Fatal().Err(err).Msg("creating rss.feed.jobs consumer")
 	}

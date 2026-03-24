@@ -7,7 +7,7 @@ import (
 
 type (
 	Publisher interface {
-		Publish(ctx context.Context, topic string, e event.Event) error
+		Publish(ctx context.Context, topic string, e event.Message) error
 	}
 
 	FeedFetcher interface {
