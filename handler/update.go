@@ -16,8 +16,9 @@ import (
 //	@Router			/feeds/update [post]
 func TriggerFeedUpdate(publisher usecase.Publisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		job := event.NewJob(event.CommandUpdateFeeds)
 		if err := publisher.Publish(r.Context(), "feed.jobs", event.Message{
-			Payload: event.Job{Command: event.CommandUpdateFeeds},
+			Payload: event.NewPayload(job),
 		}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

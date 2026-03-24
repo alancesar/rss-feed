@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,29 +20,68 @@ type (
 	}
 
 	ImageStore interface {
-		SaveImage(ctx context.Context, articleID string, Image rss.Image) error
+		SaveImage(ctx context.Context, articleID string, image rss.Image) error
 	}
 
 	ConsumeImage struct {
-		client  *http.Client
-		storage FileStorage
-		db      ImageStore
+		client     *http.Client
+		subscriber Subscriber
+		storage    FileStorage
+		db         ImageStore
 	}
 )
 
-func NewConsumeImage(client *http.Client, storage FileStorage, db ImageStore) *ConsumeImage {
+func NewConsumeImage(client *http.Client, subscriber Subscriber, storage FileStorage, db ImageStore) *ConsumeImage {
 	return &ConsumeImage{
-		client:  client,
-		storage: storage,
-		db:      db,
+		client:     client,
+		storage:    storage,
+		subscriber: subscriber,
+		db:         db,
 	}
 }
 
-func (uc ConsumeImage) Execute(ctx context.Context, e event.Image) error {
-	log := zerolog.Ctx(ctx)
+func (uc ConsumeImage) Execute(ctx context.Context) error {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Msg("starting consume image")
 
-	log.Info().Str("url", e.URL).Str("article_id", e.ArticleID).Msg("downloading image")
-	resp, err := uc.client.Get(e.URL)
+	defer func() {
+		_ = uc.subscriber.Close()
+		logger.Info().Msg("finished consume image")
+	}()
+
+	deliveries, err := uc.subscriber.Subscribe(ctx, "rss.feed.article.image.found")
+	if err != nil {
+		return err
+	}
+
+	for delivery := range deliveries {
+		var e event.Image
+		if err := json.Unmarshal(delivery.Payload, &e); err != nil {
+			logger.Error().Err(err).Msg("failed to unmarshal image")
+			if err := delivery.Nack(false); err != nil {
+				logger.Error().Err(err).Msg("failed to nack delivery")
+			}
+			continue
+		}
+
+		logger.Info().Str("url", e.URL).Str("article_id", e.ArticleID).Msg("downloading image")
+		if err := uc.saveImageToStorage(ctx, e.ArticleID, e.URL); err != nil {
+			if err := delivery.Nack(true); err != nil {
+				logger.Error().Err(err).Msg("failed to nack delivery")
+			}
+			continue
+		}
+
+		if err := delivery.Ack(); err != nil {
+			logger.Error().Err(err).Msg("failed to ack delivery")
+		}
+	}
+
+	return nil
+}
+
+func (uc ConsumeImage) saveImageToStorage(ctx context.Context, articleID, imgURL string) error {
+	resp, err := uc.client.Get(imgURL)
 	if err != nil {
 		return err
 	}
@@ -51,24 +91,25 @@ func (uc ConsumeImage) Execute(ctx context.Context, e event.Image) error {
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return err
+		return fmt.Errorf("unexpected status %d fetching image", resp.StatusCode)
 	}
 
-	u, err := url.Parse(e.URL)
+	u, err := url.Parse(imgURL)
 	if err != nil {
 		return err
 	}
 	ext := filepath.Ext(filepath.Base(u.Path))
-	path := fmt.Sprintf("images/original/%s%s", e.ArticleID, ext)
+	path := fmt.Sprintf("images/original/%s%s", articleID, ext)
 
-	log.Info().Str("path", path).Msg("uploading image to s3")
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Str("path", path).Msg("uploading image to s3")
 	if err := uc.storage.Create(ctx, path, resp.Body); err != nil {
 		return err
 	}
 
 	img := rss.NewImage(path, rss.OriginalImageType)
-	log.Info().Str("article_id", e.ArticleID).Str("path", path).Msg("saving image to database")
-	if err := uc.db.SaveImage(ctx, e.ArticleID, img); err != nil {
+	logger.Info().Str("article_id", articleID).Str("path", path).Msg("saving image to database")
+	if err := uc.db.SaveImage(ctx, articleID, img); err != nil {
 		return err
 	}
 

@@ -22,7 +22,6 @@ type (
 
 	RabbitMQSubscriber struct {
 		channel    *amqp.Channel
-		queue      string
 		deliveries chan event.Delivery
 	}
 )
@@ -45,7 +44,7 @@ func (r RabbitMQ) NewPublisher(exchange string) (*RabbitMQPublisher, error) {
 	}, nil
 }
 
-func (r RabbitMQ) NewSubscriber(queue string) (*RabbitMQSubscriber, error) {
+func (r RabbitMQ) NewSubscriber() (*RabbitMQSubscriber, error) {
 	ch, err := r.conn.Channel()
 	if err != nil {
 		return nil, err
@@ -53,7 +52,6 @@ func (r RabbitMQ) NewSubscriber(queue string) (*RabbitMQSubscriber, error) {
 
 	return &RabbitMQSubscriber{
 		channel:    ch,
-		queue:      queue,
 		deliveries: make(chan event.Delivery),
 	}, nil
 }
@@ -102,27 +100,6 @@ func (c RabbitMQSubscriber) Subscribe(ctx context.Context, queue string) (<-chan
 	}()
 
 	return c.deliveries, nil
-}
-
-func (c RabbitMQSubscriber) Consume(ctx context.Context, handler Handler) error {
-	defer func() {
-		_ = c.channel.Close()
-	}()
-
-	deliveries, err := c.channel.ConsumeWithContext(ctx, c.queue, "", false, false, false, false, nil)
-	if err != nil {
-		return err
-	}
-
-	for delivery := range deliveries {
-		if err := handler(ctx, delivery.Body); err != nil {
-			_ = delivery.Nack(false, true)
-		} else {
-			_ = delivery.Ack(false)
-		}
-	}
-
-	return nil
 }
 
 func (c RabbitMQSubscriber) Close() error {
