@@ -87,6 +87,13 @@ func main() {
 		}
 	}
 
+	forceUpdate := make(chan struct{}, 1)
+
+	jobsConsumer, err := rabbitMQ.NewConsumer("rss.feed.jobs")
+	if err != nil {
+		log.Fatal().Err(err).Msg("creating rss.feed.jobs consumer")
+	}
+
 	log.Info().Msg("worker started")
 
 	go func() {
@@ -115,6 +122,26 @@ func main() {
 		}
 	}()
 
+	go func() {
+		if err := jobsConsumer.Consume(ctx, func(_ context.Context, body []byte) error {
+			var j event.Job
+			if err := json.Unmarshal(body, &j); err != nil {
+				return err
+			}
+
+			if j.Command == event.CommandUpdateFeeds {
+				select {
+				case forceUpdate <- struct{}{}:
+				default:
+				}
+			}
+
+			return nil
+		}); err != nil {
+			log.Fatal().Err(err).Msg("consuming rss.feed.jobs events")
+		}
+	}()
+
 	log.Info().Dur("interval", updateInterval).Msg("starting feed update ticker")
 	if err := updateFeedsUseCase.Execute(ctx); err != nil {
 		log.Error().Err(err).Msg("updating feeds")
@@ -123,9 +150,18 @@ func main() {
 	ticker := time.NewTicker(updateInterval)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		if err := updateFeedsUseCase.Execute(ctx); err != nil {
-			log.Error().Err(err).Msg("updating feeds")
+	for {
+		select {
+		case <-ticker.C:
+			if err := updateFeedsUseCase.Execute(ctx); err != nil {
+				log.Error().Err(err).Msg("updating feeds")
+			}
+		case <-forceUpdate:
+			log.Info().Msg("forced feed update triggered")
+			if err := updateFeedsUseCase.Execute(ctx); err != nil {
+				log.Error().Err(err).Msg("updating feeds")
+			}
+			ticker.Reset(updateInterval)
 		}
 	}
 }
