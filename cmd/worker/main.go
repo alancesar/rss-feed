@@ -117,9 +117,9 @@ func main() {
 		for delivery := range deliveries {
 			var j event.Job
 			if err := json.Unmarshal(delivery.Payload, &j); err != nil {
-				log.Fatal().Err(err).Msg("unmarshalling rss.feed.job event")
+				log.Error().Err(err).Msg("unmarshalling rss.feed.job event")
 				if err := delivery.Nack(false); err != nil {
-					log.Fatal().Err(err).Msg("acknowledging delivery")
+					log.Error().Err(err).Msg("failed to nack delivery")
 				}
 				continue
 			}
@@ -130,6 +130,10 @@ func main() {
 				case forceUpdate <- struct{}{}:
 				default:
 				}
+			}
+
+			if err := delivery.Ack(); err != nil {
+				log.Error().Err(err).Msg("failed to ack delivery")
 			}
 		}
 

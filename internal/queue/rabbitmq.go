@@ -13,8 +13,6 @@ type (
 		conn *amqp.Connection
 	}
 
-	Handler func(context.Context, []byte) error
-
 	RabbitMQPublisher struct {
 		channel  *amqp.Channel
 		exchange string
