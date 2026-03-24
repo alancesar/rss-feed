@@ -21,8 +21,9 @@ type (
 	}
 
 	RabbitMQConsumer struct {
-		channel *amqp.Channel
-		queue   string
+		channel  *amqp.Channel
+		queue    string
+		messages chan event.Message
 	}
 )
 
@@ -51,9 +52,14 @@ func (r RabbitMQ) NewConsumer(queue string) (*RabbitMQConsumer, error) {
 	}
 
 	return &RabbitMQConsumer{
-		channel: ch,
-		queue:   queue,
+		channel:  ch,
+		queue:    queue,
+		messages: make(chan event.Message),
 	}, nil
+}
+
+func (r RabbitMQ) Close() error {
+	return r.conn.Close()
 }
 
 func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.Event) error {
@@ -70,6 +76,30 @@ func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.E
 	}
 
 	return err
+}
+
+func (c RabbitMQConsumer) Subscribe(ctx context.Context, queue string) (<-chan event.Message, error) {
+	deliveries, err := c.channel.ConsumeWithContext(ctx, queue, "", false, false, false, false, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		for delivery := range deliveries {
+			c.messages <- event.Message{
+				Headers: delivery.Headers,
+				Payload: delivery.Body,
+				Ack: func() error {
+					return delivery.Ack(false)
+				},
+				Nack: func(requeue bool) error {
+					return delivery.Nack(false, requeue)
+				},
+			}
+		}
+	}()
+
+	return c.messages, nil
 }
 
 func (c RabbitMQConsumer) Consume(ctx context.Context, handler Handler) error {
@@ -91,4 +121,9 @@ func (c RabbitMQConsumer) Consume(ctx context.Context, handler Handler) error {
 	}
 
 	return nil
+}
+
+func (c RabbitMQConsumer) Close() error {
+	close(c.messages)
+	return c.channel.Close()
 }
