@@ -30,7 +30,7 @@ func NewGoFeed() *GoFeed {
 func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 	feed, err := r.parser.ParseURLWithContext(url, ctx)
 	if err != nil {
-		return event.Feed{}, fmt.Errorf("faield to parse feed: %w", err)
+		return event.Feed{}, fmt.Errorf("failed to parse feed: %w", err)
 	}
 
 	if len(feed.Items) == 0 {
