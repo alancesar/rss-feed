@@ -11,11 +11,7 @@ import (
 )
 
 type (
-	WatermillPublisher struct {
-		pubSub *gochannel.GoChannel
-	}
-
-	WatermillSubscriber struct {
+	WatermillBroker struct {
 		pubSub     *gochannel.GoChannel
 		deliveries chan event.Delivery
 		cancel     context.CancelFunc
@@ -32,45 +28,41 @@ func NewGoChannel() *gochannel.GoChannel {
 	)
 }
 
-func NewWatermillPublisher(pubSub *gochannel.GoChannel) *WatermillPublisher {
-	return &WatermillPublisher{pubSub: pubSub}
-}
-
-func NewWatermillSubscriber(pubSub *gochannel.GoChannel) *WatermillSubscriber {
-	return &WatermillSubscriber{
+func NewWatermillBroker(pubSub *gochannel.GoChannel) *WatermillBroker {
+	return &WatermillBroker{
 		pubSub:     pubSub,
 		deliveries: make(chan event.Delivery),
 	}
 }
 
-func (p *WatermillPublisher) Publish(_ context.Context, topic string, e event.Message) error {
+func (b *WatermillBroker) Publish(_ context.Context, topic string, e event.Message) error {
 	msg := message.NewMessage(watermill.NewUUID(), []byte(e.Payload))
 	for k, v := range e.Headers {
 		msg.Metadata.Set(k, fmt.Sprintf("%v", v))
 	}
 
-	return p.pubSub.Publish(topic, msg)
+	return b.pubSub.Publish(topic, msg)
 }
 
-func (s *WatermillSubscriber) Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error) {
+func (b *WatermillBroker) Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error) {
 	subCtx, cancel := context.WithCancel(ctx)
-	s.cancel = cancel
+	b.cancel = cancel
 
-	messages, err := s.pubSub.Subscribe(subCtx, queue)
+	messages, err := b.pubSub.Subscribe(subCtx, queue)
 	if err != nil {
 		cancel()
 		return nil, err
 	}
 
 	go func() {
-		defer close(s.deliveries)
+		defer close(b.deliveries)
 		for msg := range messages {
 			headers := make(map[string]interface{}, len(msg.Metadata))
 			for k, v := range msg.Metadata {
 				headers[k] = v
 			}
 
-			s.deliveries <- event.Delivery{
+			b.deliveries <- event.Delivery{
 				Message: event.Message{
 					Headers: headers,
 					Payload: event.Payload(msg.Payload),
@@ -85,12 +77,12 @@ func (s *WatermillSubscriber) Subscribe(ctx context.Context, queue string) (<-ch
 		}
 	}()
 
-	return s.deliveries, nil
+	return b.deliveries, nil
 }
 
-func (s *WatermillSubscriber) Close() error {
-	if s.cancel != nil {
-		s.cancel()
+func (b *WatermillBroker) Close() error {
+	if b.cancel != nil {
+		b.cancel()
 	}
 	return nil
 }

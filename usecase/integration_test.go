@@ -58,19 +58,18 @@ func saveTestArticle(t *testing.T, ctx context.Context, db *database.Gorm, publi
 
 func newTestPublisher(t *testing.T) usecase.Publisher {
 	t.Helper()
-	return queue.NewWatermillPublisher(queue.NewGoChannel())
+	return queue.NewWatermillBroker(queue.NewGoChannel())
 }
 
 func newTestSubscriber(t *testing.T, topic string, messages ...any) usecase.Subscriber {
 	t.Helper()
-	pubSub := queue.NewGoChannel()
-	pub := queue.NewWatermillPublisher(pubSub)
+	broker := queue.NewWatermillBroker(queue.NewGoChannel())
 	for _, msg := range messages {
-		if err := pub.Publish(context.Background(), topic, event.Message{Payload: event.NewPayload(msg)}); err != nil {
+		if err := broker.Publish(context.Background(), topic, event.Message{Payload: event.NewPayload(msg)}); err != nil {
 			t.Fatalf("publishing test message: %v", err)
 		}
 	}
-	return queue.NewWatermillSubscriber(pubSub)
+	return broker
 }
 
 func awaitCondition(t *testing.T, ctx context.Context, check func() bool) {

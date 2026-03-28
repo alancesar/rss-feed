@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"os"
 	"rss-feed/internal/database"
 	"rss-feed/internal/feed"
@@ -15,7 +13,6 @@ import (
 	"rss-feed/usecase"
 	"time"
 
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -39,49 +36,14 @@ func main() {
 		log.Fatal().Err(err).Msg("creating s3 client")
 	}
 
-	amqpURL := os.Getenv("AMQP_URL")
-	u, err := url.Parse(amqpURL)
-	if err != nil {
-		log.Fatal().Err(err).Msg("parsing AMQP_URL")
-	}
+	pubSub := queue.NewGoChannel()
+	feedBroker := queue.NewWatermillBroker(pubSub)
+	imageBroker := queue.NewWatermillBroker(pubSub)
+	jobsBroker := queue.NewWatermillBroker(pubSub)
 
-	cfg := &tls.Config{
-		ServerName: u.Hostname(),
-	}
-
-	conn, err := amqp.DialTLS(amqpURL, cfg)
-	if err != nil {
-		log.Fatal().Err(err).Msg("connecting to rabbitmq")
-	}
-
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	rabbitMQ := queue.NewRabbitMQ(conn)
-	feedSubscriber, err := rabbitMQ.NewSubscriber()
-	if err != nil {
-		log.Fatal().Err(err).Msg("creating rabbitmq subscriber")
-	}
-
-	imageSubscriber, err := rabbitMQ.NewSubscriber()
-	if err != nil {
-		log.Fatal().Err(err).Msg("creating rabbitmq subscriber")
-	}
-
-	jobsConsumer, err := rabbitMQ.NewSubscriber()
-	if err != nil {
-		log.Fatal().Err(err).Msg("creating rss.feed.jobs consumer")
-	}
-
-	imagePublisher, err := rabbitMQ.NewPublisher("rss")
-	if err != nil {
-		log.Fatal().Err(err).Msg("creating rabbitmq publisher")
-	}
-
-	consumeFeedUseCase := usecase.NewConsumeFeed(sqliteDatabase, feedSubscriber, imagePublisher)
-	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, imageSubscriber, s3Storage, sqliteDatabase)
-	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), imagePublisher)
+	consumeFeedUseCase := usecase.NewConsumeFeed(sqliteDatabase, feedBroker, feedBroker)
+	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, imageBroker, s3Storage, sqliteDatabase)
+	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), feedBroker)
 
 	updateInterval := 30 * time.Minute
 	if v := os.Getenv("UPDATE_INTERVAL"); v != "" {
@@ -109,7 +71,7 @@ func main() {
 	}()
 
 	go func() {
-		deliveries, err := jobsConsumer.Subscribe(ctx, "rss.feed.jobs")
+		deliveries, err := jobsBroker.Subscribe(ctx, "rss.feed.jobs")
 		if err != nil {
 			log.Fatal().Err(err).Msg("consuming rss.feed.jobs events")
 		}

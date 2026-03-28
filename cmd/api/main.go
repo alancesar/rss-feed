@@ -29,7 +29,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"gorm.io/driver/sqlite"
@@ -53,16 +52,7 @@ func main() {
 		log.Fatal().Err(err).Msg("creating s3 client")
 	}
 
-	dial, err := amqp.Dial(os.Getenv("AMQP_URL"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("connecting to rabbitmq")
-	}
-
-	rabbitMQ := queue.NewRabbitMQ(dial)
-	publisher, err := rabbitMQ.NewPublisher("rss")
-	if err != nil {
-		log.Fatal().Err(err).Msg("creating rabbitmq publisher")
-	}
+	publisher := queue.NewWatermillBroker(queue.NewGoChannel())
 
 	readArticlesUseCase := usecase.NewReadArticles(sqliteDatabase, s3Storage)
 	saveFeedUseCase := usecase.NewSaveFeed(feed.NewGoFeed(), sqliteDatabase, publisher)
