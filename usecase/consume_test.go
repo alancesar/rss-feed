@@ -3,15 +3,17 @@ package usecase_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"rss-feed/pkg/event"
 	"rss-feed/usecase"
 )
 
 func TestConsumeFeed_Execute(t *testing.T) {
-	ctx := context.Background()
-	db := newTestDB(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
+	db := newTestDB(t)
 	createTestFeed(t, ctx, db)
 
 	now := today()
@@ -36,11 +38,14 @@ func TestConsumeFeed_Execute(t *testing.T) {
 		},
 	}
 
-	subscriber := &mockSubscriber{messages: []any{feedEvent}}
-	uc := usecase.NewConsumeFeed(db, subscriber, &mockPublisher{})
-	if err := uc.Execute(ctx); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	subscriber := newTestSubscriber(t, "rss.feed.article.found", feedEvent)
+	uc := usecase.NewConsumeFeed(db, subscriber, newTestPublisher(t))
+	go func() { _ = uc.Execute(ctx) }()
+
+	awaitCondition(t, ctx, func() bool {
+		articles, _ := db.GetArticlesFromDate(ctx, now)
+		return len(articles) == 2
+	})
 
 	articles, err := db.GetArticlesFromDate(ctx, now)
 	if err != nil {

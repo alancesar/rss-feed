@@ -27,7 +27,7 @@ func TestUpdateFeeds_Execute(t *testing.T) {
 		feed: event.Feed{FeedID: "x", Name: "Feed"},
 	}
 
-	uc := usecase.NewUpdateFeeds(db, fetcher, &mockPublisher{})
+	uc := usecase.NewUpdateFeeds(db, fetcher, newTestPublisher(t))
 	if err := uc.Execute(ctx); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestUpdateFeeds_Execute_SkipsFailedFeeds(t *testing.T) {
 		return event.Feed{FeedID: "x", Name: "Feed", URL: url}, nil
 	}}
 
-	uc := usecase.NewUpdateFeeds(db, fetcher, &mockPublisher{})
+	uc := usecase.NewUpdateFeeds(db, fetcher, newTestPublisher(t))
 	if err := uc.Execute(ctx); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -18,6 +18,7 @@ type (
 	WatermillSubscriber struct {
 		pubSub     *gochannel.GoChannel
 		deliveries chan event.Delivery
+		cancel     context.CancelFunc
 	}
 )
 
@@ -25,6 +26,7 @@ func NewGoChannel() *gochannel.GoChannel {
 	return gochannel.NewGoChannel(
 		gochannel.Config{
 			OutputChannelBuffer: 64,
+			Persistent:          true,
 		},
 		watermill.NopLogger{},
 	)
@@ -51,12 +53,17 @@ func (p *WatermillPublisher) Publish(_ context.Context, topic string, e event.Me
 }
 
 func (s *WatermillSubscriber) Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error) {
-	messages, err := s.pubSub.Subscribe(ctx, queue)
+	subCtx, cancel := context.WithCancel(ctx)
+	s.cancel = cancel
+
+	messages, err := s.pubSub.Subscribe(subCtx, queue)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
 	go func() {
+		defer close(s.deliveries)
 		for msg := range messages {
 			headers := make(map[string]interface{}, len(msg.Metadata))
 			for k, v := range msg.Metadata {
@@ -84,6 +91,8 @@ func (s *WatermillSubscriber) Subscribe(ctx context.Context, queue string) (<-ch
 }
 
 func (s *WatermillSubscriber) Close() error {
-	close(s.deliveries)
-	return s.pubSub.Close()
+	if s.cancel != nil {
+		s.cancel()
+	}
+	return nil
 }
