@@ -21,7 +21,9 @@ import (
 	"rss-feed/internal/feed"
 	"rss-feed/internal/queue"
 	"rss-feed/internal/storage"
+	"rss-feed/pkg/event"
 	"rss-feed/usecase"
+	"time"
 
 	_ "rss-feed/docs"
 
@@ -38,6 +40,7 @@ import (
 
 func main() {
 	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
+	ctx := log.WithContext(context.Background())
 
 	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
@@ -52,10 +55,88 @@ func main() {
 		log.Fatal().Err(err).Msg("creating s3 client")
 	}
 
-	publisher := queue.NewWatermillBroker(queue.NewGoChannel())
+	pubSub := queue.NewGoChannel()
+	broker := queue.NewWatermillBroker(pubSub)
 
 	readArticlesUseCase := usecase.NewReadArticles(sqliteDatabase, s3Storage)
-	saveFeedUseCase := usecase.NewSaveFeed(feed.NewGoFeed(), sqliteDatabase, publisher)
+	saveFeedUseCase := usecase.NewSaveFeed(feed.NewGoFeed(), sqliteDatabase, broker)
+	consumeFeedUseCase := usecase.NewConsumeFeed(sqliteDatabase, broker)
+	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, broker, s3Storage, sqliteDatabase)
+	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), broker)
+
+	updateInterval := 30 * time.Minute
+	if v := os.Getenv("UPDATE_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			updateInterval = d
+		} else {
+			log.Warn().Str("value", v).Msg("invalid UPDATE_INTERVAL, using default 30m")
+		}
+	}
+
+	forceUpdate := make(chan struct{}, 1)
+
+	go func() {
+		if err := consumeFeedUseCase.Execute(ctx); err != nil {
+			log.Fatal().Err(err).Msg("consuming rss.feed.article.found events")
+		}
+	}()
+
+	go func() {
+		if err := consumeImageUseCase.Execute(ctx); err != nil {
+			log.Fatal().Err(err).Msg("consuming rss.feed.article.image events")
+		}
+	}()
+
+	go func() {
+		deliveries, err := broker.Subscribe(ctx, "rss.feed.jobs")
+		if err != nil {
+			log.Fatal().Err(err).Msg("consuming rss.feed.jobs events")
+		}
+
+		for delivery := range deliveries {
+			var j event.Job
+			if err := json.Unmarshal(delivery.Payload, &j); err != nil {
+				log.Error().Err(err).Msg("unmarshalling rss.feed.job event")
+				delivery.Nack(false)
+				continue
+			}
+
+			switch j.Command {
+			case event.CommandUpdateFeeds:
+				select {
+				case forceUpdate <- struct{}{}:
+				default:
+				}
+			}
+
+			delivery.Ack()
+		}
+	}()
+
+	go func() {
+		log.Info().Dur("interval", updateInterval).Msg("starting feed update ticker")
+		if err := updateFeedsUseCase.Execute(ctx); err != nil {
+			log.Error().Err(err).Msg("updating feeds")
+		}
+
+		ticker := time.NewTicker(updateInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				if err := updateFeedsUseCase.Execute(ctx); err != nil {
+					log.Error().Err(err).Msg("updating feeds")
+				}
+			case <-forceUpdate:
+				log.Info().Msg("forced feed update triggered")
+				if err := updateFeedsUseCase.Execute(ctx); err != nil {
+					log.Error().Err(err).Msg("updating feeds")
+				}
+				ticker.Reset(updateInterval)
+			}
+		}
+	}()
 
 	r := chi.NewRouter()
 	r.Use(func(next http.Handler) http.Handler {
@@ -90,7 +171,7 @@ func main() {
 
 	r.Route("/feeds", func(r chi.Router) {
 		r.Post("/", handler.AddFeed(saveFeedUseCase))
-		r.Post("/update", handler.TriggerFeedUpdate(publisher))
+		r.Post("/update", handler.TriggerFeedUpdate(broker))
 	})
 
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
