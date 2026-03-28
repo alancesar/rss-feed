@@ -39,7 +39,7 @@ func main() {
 	pubSub := queue.NewGoChannel()
 	broker := queue.NewWatermillBroker(pubSub)
 
-	consumeFeedUseCase := usecase.NewConsumeFeed(sqliteDatabase, broker, broker)
+	consumeFeedUseCase := usecase.NewConsumeFeed(sqliteDatabase, broker)
 	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, broker, s3Storage, sqliteDatabase)
 	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), broker)
 

@@ -31,11 +31,6 @@ type (
 		queues map[string]chan event.Delivery
 	}
 
-	inMemorySubscriber struct {
-		broker *inMemoryBroker
-		out    chan event.Delivery
-	}
-
 	fakeFetcher struct {
 		feed event.Feed
 	}
@@ -74,20 +69,14 @@ func (b *inMemoryBroker) Publish(_ context.Context, topic string, msg event.Mess
 	return nil
 }
 
-func (b *inMemoryBroker) newSubscriber() *inMemorySubscriber {
-	return &inMemorySubscriber{
-		broker: b,
-		out:    make(chan event.Delivery),
-	}
-}
-
-func (s *inMemorySubscriber) Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error) {
-	src, ok := s.broker.queues[queue]
+func (b *inMemoryBroker) Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error) {
+	src, ok := b.queues[queue]
 	if !ok {
 		return nil, fmt.Errorf("unknown queue: %s", queue)
 	}
+	out := make(chan event.Delivery)
 	go func() {
-		defer close(s.out)
+		defer close(out)
 		for {
 			select {
 			case <-ctx.Done():
@@ -97,17 +86,17 @@ func (s *inMemorySubscriber) Subscribe(ctx context.Context, queue string) (<-cha
 					return
 				}
 				select {
-				case s.out <- d:
+				case out <- d:
 				case <-ctx.Done():
 					return
 				}
 			}
 		}
 	}()
-	return s.out, nil
+	return out, nil
 }
 
-func (s *inMemorySubscriber) Close() error { return nil }
+func (b *inMemoryBroker) Close() error { return nil }
 
 func (f *fakeFetcher) Fetch(_ context.Context, _ string) (event.Feed, error) {
 	return f.feed, nil
@@ -163,8 +152,8 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	saveFeedUC := usecase.NewSaveFeed(fetcher, db, broker)
-	consumeFeedUC := usecase.NewConsumeFeed(db, broker.newSubscriber(), broker)
-	consumeImageUC := usecase.NewConsumeImage(http.DefaultClient, broker.newSubscriber(), &mockFileStorage{}, db)
+	consumeFeedUC := usecase.NewConsumeFeed(db, broker)
+	consumeImageUC := usecase.NewConsumeImage(http.DefaultClient, broker, &mockFileStorage{}, db)
 	readArticlesUC := usecase.NewReadArticles(db, &mockImageStorage{})
 
 	go func() {

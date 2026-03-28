@@ -38,8 +38,7 @@ func TestConsumeFeed_Execute(t *testing.T) {
 		},
 	}
 
-	subscriber := newTestSubscriber(t, "rss.feed.article.found", feedEvent)
-	uc := usecase.NewConsumeFeed(db, subscriber, newTestPublisher(t))
+	uc := usecase.NewConsumeFeed(db, newTestSubscriber(t, "rss.feed.article.found", feedEvent))
 	go func() { _ = uc.Execute(ctx) }()
 
 	awaitCondition(t, ctx, func() bool {

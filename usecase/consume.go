@@ -14,18 +14,21 @@ type (
 		SaveArticle(context.Context, string, rss.Article) error
 	}
 
+	Broker interface {
+		Publisher
+		Subscriber
+	}
+
 	ConsumeFeed struct {
-		subscriber Subscriber
-		store      ArticleStore
-		publisher  Publisher
+		store  ArticleStore
+		broker Broker
 	}
 )
 
-func NewConsumeFeed(store ArticleStore, subscriber Subscriber, publisher Publisher) *ConsumeFeed {
+func NewConsumeFeed(store ArticleStore, broker Broker) *ConsumeFeed {
 	return &ConsumeFeed{
-		subscriber: subscriber,
-		store:      store,
-		publisher:  publisher,
+		store:  store,
+		broker: broker,
 	}
 }
 
@@ -34,11 +37,11 @@ func (uc ConsumeFeed) Execute(ctx context.Context) error {
 	logger.Info().Msg("starting consume articles")
 
 	defer func() {
-		_ = uc.subscriber.Close()
+		_ = uc.broker.Close()
 		logger.Info().Msg("finished consume articles")
 	}()
 
-	deliveries, err := uc.subscriber.Subscribe(ctx, "rss.feed.article.found")
+	deliveries, err := uc.broker.Subscribe(ctx, "rss.feed.article.found")
 	if err != nil {
 		return err
 	}
@@ -65,7 +68,7 @@ func (uc ConsumeFeed) Execute(ctx context.Context) error {
 			}
 
 			logger.Info().Str("article_id", article.ArticleID).Msg("publishing image event")
-			if err := uc.publisher.Publish(ctx, "feed.article.image.found", event.Message{
+			if err := uc.broker.Publish(ctx, "feed.article.image.found", event.Message{
 				Payload: event.NewPayload(article.Image),
 			}); err != nil {
 				continue
