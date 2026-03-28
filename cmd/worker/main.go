@@ -37,13 +37,11 @@ func main() {
 	}
 
 	pubSub := queue.NewGoChannel()
-	feedBroker := queue.NewWatermillBroker(pubSub)
-	imageBroker := queue.NewWatermillBroker(pubSub)
-	jobsBroker := queue.NewWatermillBroker(pubSub)
+	broker := queue.NewWatermillBroker(pubSub)
 
-	consumeFeedUseCase := usecase.NewConsumeFeed(sqliteDatabase, feedBroker, feedBroker)
-	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, imageBroker, s3Storage, sqliteDatabase)
-	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), feedBroker)
+	consumeFeedUseCase := usecase.NewConsumeFeed(sqliteDatabase, broker, broker)
+	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, broker, s3Storage, sqliteDatabase)
+	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), broker)
 
 	updateInterval := 30 * time.Minute
 	if v := os.Getenv("UPDATE_INTERVAL"); v != "" {
@@ -71,7 +69,7 @@ func main() {
 	}()
 
 	go func() {
-		deliveries, err := jobsBroker.Subscribe(ctx, "rss.feed.jobs")
+		deliveries, err := broker.Subscribe(ctx, "rss.feed.jobs")
 		if err != nil {
 			log.Fatal().Err(err).Msg("consuming rss.feed.jobs events")
 		}

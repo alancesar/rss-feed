@@ -12,9 +12,7 @@ import (
 
 type (
 	WatermillBroker struct {
-		pubSub     *gochannel.GoChannel
-		deliveries chan event.Delivery
-		cancel     context.CancelFunc
+		pubSub *gochannel.GoChannel
 	}
 )
 
@@ -30,8 +28,7 @@ func NewGoChannel() *gochannel.GoChannel {
 
 func NewWatermillBroker(pubSub *gochannel.GoChannel) *WatermillBroker {
 	return &WatermillBroker{
-		pubSub:     pubSub,
-		deliveries: make(chan event.Delivery),
+		pubSub: pubSub,
 	}
 }
 
@@ -45,24 +42,21 @@ func (b *WatermillBroker) Publish(_ context.Context, topic string, e event.Messa
 }
 
 func (b *WatermillBroker) Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error) {
-	subCtx, cancel := context.WithCancel(ctx)
-	b.cancel = cancel
-
-	messages, err := b.pubSub.Subscribe(subCtx, queue)
+	messages, err := b.pubSub.Subscribe(ctx, queue)
 	if err != nil {
-		cancel()
 		return nil, err
 	}
 
+	deliveries := make(chan event.Delivery)
 	go func() {
-		defer close(b.deliveries)
+		defer close(deliveries)
 		for msg := range messages {
 			headers := make(map[string]interface{}, len(msg.Metadata))
 			for k, v := range msg.Metadata {
 				headers[k] = v
 			}
 
-			b.deliveries <- event.Delivery{
+			deliveries <- event.Delivery{
 				Message: event.Message{
 					Headers: headers,
 					Payload: event.Payload(msg.Payload),
@@ -77,12 +71,9 @@ func (b *WatermillBroker) Subscribe(ctx context.Context, queue string) (<-chan e
 		}
 	}()
 
-	return b.deliveries, nil
+	return deliveries, nil
 }
 
 func (b *WatermillBroker) Close() error {
-	if b.cancel != nil {
-		b.cancel()
-	}
-	return nil
+	return b.pubSub.Close()
 }
