@@ -114,6 +114,27 @@ type Foo struct {
 
 When multiple types belong to the same file, they should all be declared inside a single `type ( ... )` block at the top of the file.
 
+## Goroutine and Defer Convention
+
+When launching a goroutine or deferring a call to a function that returns an error, always wrap it in an anonymous function and explicitly discard the return value:
+
+```go
+// correct
+go func() {
+    _ = someUseCase.Execute(ctx)
+}()
+
+defer func() {
+    _ = resource.Close()
+}()
+
+// incorrect — silently discards the return value without making it explicit
+go someUseCase.Execute(ctx)
+defer resource.Close()
+```
+
+This makes the intentional discard visible and avoids the implicit drop that Go allows but doesn't encourage.
+
 ## Design Notes
 
 - Dependency injection via constructor functions
