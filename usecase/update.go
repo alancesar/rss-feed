@@ -50,7 +50,10 @@ func (uc UpdateFeeds) Execute(ctx context.Context, updateInterval time.Duration)
 		case <-ctx.Done():
 			logger.Info().Msg("stopping rss.feed.jobs consumer")
 			return ctx.Err()
-		case delivery := <-deliveries:
+		case delivery, ok := <-deliveries:
+			if !ok {
+				return nil
+			}
 			var j event.Job
 			if err := json.Unmarshal(delivery.Payload, &j); err != nil {
 				logger.Error().Err(err).Msg("unmarshalling rss.feed.job event")
@@ -87,6 +90,10 @@ func (uc UpdateFeeds) updateFeeds(ctx context.Context) error {
 		fetchedFeed, err := uc.fetcher.Fetch(ctx, feed.URL)
 		if err != nil {
 			logger.Error().Err(err).Str("url", feed.URL).Msg("failed to fetch feed")
+			continue
+		}
+		if fetchedFeed.UpdatedAt != nil && feed.UpdatedAt.After(*fetchedFeed.UpdatedAt) {
+			logger.Info().Str("name", fetchedFeed.Name).Str("url", feed.URL).Msg("feed not updated, skipping")
 			continue
 		}
 

@@ -64,10 +64,11 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 	}
 
 	return event.Feed{
-		FeedID:   feedID,
-		Name:     feed.Title,
-		URL:      feed.Link,
-		Articles: articles,
+		FeedID:    feedID,
+		Name:      feed.Title,
+		URL:       feed.Link,
+		UpdatedAt: feed.UpdatedParsed,
+		Articles:  articles,
 	}, nil
 }
 
