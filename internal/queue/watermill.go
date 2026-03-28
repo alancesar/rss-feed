@@ -32,17 +32,17 @@ func NewWatermillBroker(pubSub *gochannel.GoChannel) *WatermillBroker {
 	}
 }
 
-func (b *WatermillBroker) Publish(_ context.Context, topic string, e event.Message) error {
-	msg := message.NewMessage(watermill.NewUUID(), []byte(e.Payload))
+func (b *WatermillBroker) Publish(ctx context.Context, e event.Message) error {
+	msg := message.NewMessageWithContext(ctx, watermill.NewUUID(), []byte(e.Payload))
 	for k, v := range e.Headers {
 		msg.Metadata.Set(k, fmt.Sprintf("%v", v))
 	}
 
-	return b.pubSub.Publish(topic, msg)
+	return b.pubSub.Publish(string(e.Topic), msg)
 }
 
-func (b *WatermillBroker) Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error) {
-	messages, err := b.pubSub.Subscribe(ctx, queue)
+func (b *WatermillBroker) Subscribe(ctx context.Context, topic event.Topic) (<-chan event.Delivery, error) {
+	messages, err := b.pubSub.Subscribe(ctx, string(topic))
 	if err != nil {
 		return nil, err
 	}

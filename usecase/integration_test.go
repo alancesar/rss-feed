@@ -61,11 +61,14 @@ func newTestPublisher(t *testing.T) usecase.Publisher {
 	return queue.NewWatermillBroker(queue.NewGoChannel())
 }
 
-func newTestBroker(t *testing.T, topic string, messages ...any) usecase.Broker {
+func newTestBroker(t *testing.T, topic event.Topic, messages ...any) usecase.Broker {
 	t.Helper()
 	broker := queue.NewWatermillBroker(queue.NewGoChannel())
 	for _, msg := range messages {
-		if err := broker.Publish(context.Background(), topic, event.Message{Payload: event.NewPayload(msg)}); err != nil {
+		if err := broker.Publish(context.Background(), event.Message{
+			Topic:   topic,
+			Payload: event.NewPayload(msg),
+		}); err != nil {
 			t.Fatalf("publishing test message: %v", err)
 		}
 	}

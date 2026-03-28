@@ -49,7 +49,7 @@ func (uc ConsumeImage) Execute(ctx context.Context) error {
 		logger.Info().Msg("finished consume image")
 	}()
 
-	deliveries, err := uc.subscriber.Subscribe(ctx, "rss.feed.article.image.found")
+	deliveries, err := uc.subscriber.Subscribe(ctx, event.TopicFeedFound)
 	if err != nil {
 		return err
 	}

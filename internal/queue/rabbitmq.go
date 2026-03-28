@@ -58,13 +58,13 @@ func (r RabbitMQ) Close() error {
 	return r.conn.Close()
 }
 
-func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.Message) error {
+func (p *RabbitMQPublisher) Publish(ctx context.Context, e event.Message) error {
 	body, err := json.Marshal(e.Payload)
 	if err != nil {
 		return err
 	}
 
-	if err := p.channel.PublishWithContext(ctx, p.exchange, topic, false, false, amqp.Publishing{
+	if err := p.channel.PublishWithContext(ctx, p.exchange, string(e.Topic), false, false, amqp.Publishing{
 		Headers: e.Headers,
 		Body:    body,
 	}); err != nil {
@@ -74,8 +74,8 @@ func (p *RabbitMQPublisher) Publish(ctx context.Context, topic string, e event.M
 	return err
 }
 
-func (c RabbitMQSubscriber) Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error) {
-	deliveries, err := c.channel.ConsumeWithContext(ctx, queue, "", false, false, false, false, nil)
+func (c RabbitMQSubscriber) Subscribe(ctx context.Context, topic event.Topic) (<-chan event.Delivery, error) {
+	deliveries, err := c.channel.ConsumeWithContext(ctx, string(topic), "", false, false, false, false, nil)
 	if err != nil {
 		return nil, err
 	}

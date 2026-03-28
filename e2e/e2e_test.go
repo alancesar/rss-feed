@@ -28,7 +28,7 @@ import (
 
 type (
 	inMemoryBroker struct {
-		queues map[string]chan event.Delivery
+		queues map[event.Topic]chan event.Delivery
 	}
 
 	fakeFetcher struct {
@@ -40,28 +40,22 @@ type (
 	mockImageStorage struct{}
 )
 
-var routingToQueue = map[string]string{
-	"feed.article.found":       "rss.feed.article.found",
-	"feed.article.image.found": "rss.feed.article.image.found",
-	"feed.jobs":                "rss.feed.jobs",
-}
-
 func newInMemoryBroker() *inMemoryBroker {
 	return &inMemoryBroker{
-		queues: map[string]chan event.Delivery{
-			"rss.feed.article.found":       make(chan event.Delivery, 10),
-			"rss.feed.article.image.found": make(chan event.Delivery, 10),
-			"rss.feed.jobs":                make(chan event.Delivery, 10),
+		queues: map[event.Topic]chan event.Delivery{
+			event.TopicFeedArticleFound: make(chan event.Delivery, 10),
+			event.TopicFeedFound:        make(chan event.Delivery, 10),
+			event.TopicFeedJobs:         make(chan event.Delivery, 10),
 		},
 	}
 }
 
-func (b *inMemoryBroker) Publish(_ context.Context, topic string, msg event.Message) error {
-	queue, ok := routingToQueue[topic]
+func (b *inMemoryBroker) Publish(_ context.Context, msg event.Message) error {
+	ch, ok := b.queues[msg.Topic]
 	if !ok {
-		return fmt.Errorf("unknown routing key: %s", topic)
+		return fmt.Errorf("unknown topic: %s", msg.Topic)
 	}
-	b.queues[queue] <- event.Delivery{
+	ch <- event.Delivery{
 		Message: msg,
 		Ack:     func() {},
 		Nack:    func(bool) {},
@@ -69,10 +63,10 @@ func (b *inMemoryBroker) Publish(_ context.Context, topic string, msg event.Mess
 	return nil
 }
 
-func (b *inMemoryBroker) Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error) {
-	src, ok := b.queues[queue]
+func (b *inMemoryBroker) Subscribe(ctx context.Context, topic event.Topic) (<-chan event.Delivery, error) {
+	src, ok := b.queues[topic]
 	if !ok {
-		return nil, fmt.Errorf("unknown queue: %s", queue)
+		return nil, fmt.Errorf("unknown topic: %s", topic)
 	}
 	out := make(chan event.Delivery)
 	go func() {

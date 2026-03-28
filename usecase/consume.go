@@ -36,7 +36,7 @@ func (uc ConsumeFeed) Execute(ctx context.Context) error {
 		logger.Info().Msg("finished consume articles")
 	}()
 
-	deliveries, err := uc.broker.Subscribe(ctx, "rss.feed.article.found")
+	deliveries, err := uc.broker.Subscribe(ctx, event.TopicFeedArticleFound)
 	if err != nil {
 		return err
 	}
@@ -63,9 +63,7 @@ func (uc ConsumeFeed) Execute(ctx context.Context) error {
 			}
 
 			logger.Info().Str("article_id", article.ArticleID).Msg("publishing image event")
-			if err := uc.broker.Publish(ctx, "feed.article.image.found", event.Message{
-				Payload: event.NewPayload(article.Image),
-			}); err != nil {
+			if err := uc.broker.Publish(ctx, event.NewImageFoundEvent(article.Image)); err != nil {
 				continue
 			}
 		}

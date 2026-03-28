@@ -33,7 +33,7 @@ func TestConsumeImage_Execute(t *testing.T) {
 		URL:       srv.URL + "/image.jpg",
 	}
 
-	subscriber := newTestBroker(t, "rss.feed.article.image.found", imgEvent)
+	subscriber := newTestBroker(t, event.TopicFeedFound, imgEvent)
 	uc := usecase.NewConsumeImage(http.DefaultClient, subscriber, &mockStorage{}, db)
 	go func() { _ = uc.Execute(ctx) }()
 

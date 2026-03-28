@@ -30,7 +30,7 @@ func TestUpdateFeeds_Execute(t *testing.T) {
 		feed: event.Feed{FeedID: "x", Name: "Feed"},
 	}
 
-	uc := usecase.NewUpdateFeeds(db, fetcher, newTestBroker(t, "rss.feed.jobs"))
+	uc := usecase.NewUpdateFeeds(db, fetcher, newTestBroker(t, event.TopicFeedJobs))
 	go func() { _ = uc.Execute(ctx, 10*time.Millisecond) }()
 
 	awaitCondition(t, ctx, func() bool {
@@ -66,7 +66,7 @@ func TestUpdateFeeds_Execute_SkipsFailedFeeds(t *testing.T) {
 		return event.Feed{FeedID: "x", Name: "Feed", URL: url}, nil
 	}}
 
-	uc := usecase.NewUpdateFeeds(db, fetcher, newTestBroker(t, "rss.feed.jobs"))
+	uc := usecase.NewUpdateFeeds(db, fetcher, newTestBroker(t, event.TopicFeedJobs))
 	go func() { _ = uc.Execute(ctx, 10*time.Millisecond) }()
 
 	awaitCondition(t, ctx, func() bool {

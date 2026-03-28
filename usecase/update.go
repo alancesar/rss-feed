@@ -32,12 +32,15 @@ func NewUpdateFeeds(store FeedsStore, fetcher FeedFetcher, broker Broker) *Updat
 }
 
 func (uc UpdateFeeds) Execute(ctx context.Context, updateInterval time.Duration) error {
-	logger := zerolog.Ctx(ctx)
+	if err := uc.updateFeeds(ctx); err != nil {
+		return err
+	}
 
+	logger := zerolog.Ctx(ctx)
 	ticker := time.NewTicker(updateInterval)
 	defer ticker.Stop()
 
-	deliveries, err := uc.broker.Subscribe(ctx, "rss.feed.jobs")
+	deliveries, err := uc.broker.Subscribe(ctx, event.TopicFeedJobs)
 	if err != nil {
 		return err
 	}
@@ -88,9 +91,7 @@ func (uc UpdateFeeds) updateFeeds(ctx context.Context) error {
 		}
 
 		logger.Info().Str("feed", fetchedFeed.Name).Int("articles", len(fetchedFeed.Articles)).Msg("publishing feed.article.found event")
-		if err := uc.broker.Publish(ctx, "feed.article.found", event.Message{
-			Payload: event.NewPayload(fetchedFeed),
-		}); err != nil {
+		if err := uc.broker.Publish(ctx, event.NewArticleFoundEvent(fetchedFeed)); err != nil {
 			return err
 		}
 
