@@ -47,9 +47,7 @@ func (uc ConsumeFeed) Execute(ctx context.Context) error {
 		var e event.Feed
 		if err := json.Unmarshal(delivery.Payload, &e); err != nil {
 			logger.Error().Err(err).Msg("failed to unmarshal feed")
-			if err := delivery.Nack(false); err != nil {
-				logger.Error().Err(err).Msg("failed to nack delivery")
-			}
+			delivery.Nack(false)
 			continue
 		}
 
@@ -74,9 +72,7 @@ func (uc ConsumeFeed) Execute(ctx context.Context) error {
 			}
 		}
 
-		if err := delivery.Ack(); err != nil {
-			logger.Error().Err(err).Msg("failed to ack delivery")
-		}
+		delivery.Ack()
 	}
 
 	return nil

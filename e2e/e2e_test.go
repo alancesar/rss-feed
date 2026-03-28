@@ -68,8 +68,8 @@ func (b *inMemoryBroker) Publish(_ context.Context, topic string, msg event.Mess
 	}
 	b.queues[queue] <- event.Delivery{
 		Message: msg,
-		Ack:     func() error { return nil },
-		Nack:    func(bool) error { return nil },
+		Ack:     func() {},
+		Nack:    func(bool) {},
 	}
 	return nil
 }
@@ -184,7 +184,7 @@ func TestEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST /feeds: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("expected 201 from POST /feeds, got %d", resp.StatusCode)
 	}
@@ -199,7 +199,7 @@ func TestEndToEnd(t *testing.T) {
 		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 			t.Fatalf("decoding response: %v", err)
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if len(result.Articles) > 0 && len(result.Articles[0].Images) > 0 {
 			break
 		}

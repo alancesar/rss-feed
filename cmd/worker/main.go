@@ -118,9 +118,7 @@ func main() {
 			var j event.Job
 			if err := json.Unmarshal(delivery.Payload, &j); err != nil {
 				log.Error().Err(err).Msg("unmarshalling rss.feed.job event")
-				if err := delivery.Nack(false); err != nil {
-					log.Error().Err(err).Msg("failed to nack delivery")
-				}
+				delivery.Nack(false)
 				continue
 			}
 
@@ -132,9 +130,7 @@ func main() {
 				}
 			}
 
-			if err := delivery.Ack(); err != nil {
-				log.Error().Err(err).Msg("failed to ack delivery")
-			}
+			delivery.Ack()
 		}
 
 	}()

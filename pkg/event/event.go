@@ -12,8 +12,8 @@ type (
 
 	Delivery struct {
 		Message
-		Ack  func() error
-		Nack func(requeue bool) error
+		Ack  func()
+		Nack func(requeue bool)
 	}
 )
 

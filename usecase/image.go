@@ -58,23 +58,17 @@ func (uc ConsumeImage) Execute(ctx context.Context) error {
 		var e event.Image
 		if err := json.Unmarshal(delivery.Payload, &e); err != nil {
 			logger.Error().Err(err).Msg("failed to unmarshal image")
-			if err := delivery.Nack(false); err != nil {
-				logger.Error().Err(err).Msg("failed to nack delivery")
-			}
+			delivery.Nack(false)
 			continue
 		}
 
 		logger.Info().Str("url", e.URL).Str("article_id", e.ArticleID).Msg("downloading image")
 		if err := uc.saveImageToStorage(ctx, e.ArticleID, e.URL); err != nil {
-			if err := delivery.Nack(true); err != nil {
-				logger.Error().Err(err).Msg("failed to nack delivery")
-			}
+			delivery.Nack(true)
 			continue
 		}
 
-		if err := delivery.Ack(); err != nil {
-			logger.Error().Err(err).Msg("failed to ack delivery")
-		}
+		delivery.Ack()
 	}
 
 	return nil

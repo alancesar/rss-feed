@@ -87,11 +87,11 @@ func (c RabbitMQSubscriber) Subscribe(ctx context.Context, queue string) (<-chan
 					Headers: delivery.Headers,
 					Payload: delivery.Body,
 				},
-				Ack: func() error {
-					return delivery.Ack(false)
+				Ack: func() {
+					_ = delivery.Ack(false)
 				},
-				Nack: func(requeue bool) error {
-					return delivery.Nack(false, requeue)
+				Nack: func(requeue bool) {
+					_ = delivery.Nack(false, requeue)
 				},
 			}
 		}

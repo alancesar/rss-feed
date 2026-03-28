@@ -75,13 +75,11 @@ func (s *WatermillSubscriber) Subscribe(ctx context.Context, queue string) (<-ch
 					Headers: headers,
 					Payload: event.Payload(msg.Payload),
 				},
-				Ack: func() error {
+				Ack: func() {
 					msg.Ack()
-					return nil
 				},
-				Nack: func(_ bool) error {
+				Nack: func(_ bool) {
 					msg.Nack()
-					return nil
 				},
 			}
 		}
