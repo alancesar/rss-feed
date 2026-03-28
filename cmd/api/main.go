@@ -74,19 +74,19 @@ func main() {
 
 	go func() {
 		if err := saveArticlesUseCase.Execute(ctx); err != nil {
-			log.Fatal().Err(err).Msg("consuming rss.feed.article.found events")
+			log.Fatal().Err(err).Msg("consuming feed articles")
 		}
 	}()
 
 	go func() {
 		if err := consumeImageUseCase.Execute(ctx); err != nil {
-			log.Fatal().Err(err).Msg("consuming rss.feed.article.image events")
+			log.Fatal().Err(err).Msg("consuming article images")
 		}
 	}()
 
 	go func() {
 		if err := updateFeedsUseCase.Execute(ctx, updateInterval); err != nil {
-			log.Fatal().Err(err).Msg("updating rss.feed.article.found events")
+			log.Fatal().Err(err).Msg("updating feeds")
 		}
 	}()
 
