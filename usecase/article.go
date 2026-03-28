@@ -14,20 +14,20 @@ type (
 		SaveArticle(context.Context, string, rss.Article) error
 	}
 
-	ConsumeFeed struct {
+	SaveArticles struct {
 		store  ArticleStore
 		broker Broker
 	}
 )
 
-func NewConsumeFeed(store ArticleStore, broker Broker) *ConsumeFeed {
-	return &ConsumeFeed{
+func NewSaveArticles(store ArticleStore, broker Broker) *SaveArticles {
+	return &SaveArticles{
 		store:  store,
 		broker: broker,
 	}
 }
 
-func (uc ConsumeFeed) Execute(ctx context.Context) error {
+func (uc SaveArticles) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Msg("starting consume articles")
 

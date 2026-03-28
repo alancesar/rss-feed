@@ -146,7 +146,7 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	saveFeedUC := usecase.NewSaveFeed(fetcher, db, broker)
-	consumeFeedUC := usecase.NewConsumeFeed(db, broker)
+	consumeFeedUC := usecase.NewSaveArticles(db, broker)
 	consumeImageUC := usecase.NewConsumeImage(http.DefaultClient, broker, &mockFileStorage{}, db)
 	readArticlesUC := usecase.NewReadArticles(db, &mockImageStorage{})
 
