@@ -37,7 +37,7 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 		return event.Feed{}, ErrEmptyFeed
 	}
 
-	feedID := hashFromString(url)
+	feedID := hashFromString(feed.FeedLink)
 	articles := make([]event.Article, len(feed.Items))
 	for i, item := range feed.Items {
 		articleID := hashFromString(item.Link)
@@ -66,7 +66,7 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 	return event.Feed{
 		FeedID:   feedID,
 		Name:     feed.Title,
-		URL:      url,
+		URL:      feed.Link,
 		Articles: articles,
 	}, nil
 }
