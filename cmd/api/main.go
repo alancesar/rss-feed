@@ -21,7 +21,6 @@ import (
 	"rss-feed/internal/feed"
 	"rss-feed/internal/queue"
 	"rss-feed/internal/storage"
-	"rss-feed/pkg/event"
 	"rss-feed/usecase"
 	"time"
 
@@ -73,8 +72,6 @@ func main() {
 		}
 	}
 
-	forceUpdate := make(chan struct{}, 1)
-
 	go func() {
 		if err := consumeFeedUseCase.Execute(ctx); err != nil {
 			log.Fatal().Err(err).Msg("consuming rss.feed.article.found events")
@@ -88,53 +85,8 @@ func main() {
 	}()
 
 	go func() {
-		deliveries, err := broker.Subscribe(ctx, "rss.feed.jobs")
-		if err != nil {
-			log.Fatal().Err(err).Msg("consuming rss.feed.jobs events")
-		}
-
-		for delivery := range deliveries {
-			var j event.Job
-			if err := json.Unmarshal(delivery.Payload, &j); err != nil {
-				log.Error().Err(err).Msg("unmarshalling rss.feed.job event")
-				delivery.Nack(false)
-				continue
-			}
-
-			switch j.Command {
-			case event.CommandUpdateFeeds:
-				select {
-				case forceUpdate <- struct{}{}:
-				default:
-				}
-			}
-
-			delivery.Ack()
-		}
-	}()
-
-	go func() {
-		log.Info().Dur("interval", updateInterval).Msg("starting feed update ticker")
-		if err := updateFeedsUseCase.Execute(ctx); err != nil {
-			log.Error().Err(err).Msg("updating feeds")
-		}
-
-		ticker := time.NewTicker(updateInterval)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				if err := updateFeedsUseCase.Execute(ctx); err != nil {
-					log.Error().Err(err).Msg("updating feeds")
-				}
-			case <-forceUpdate:
-				log.Info().Msg("forced feed update triggered")
-				if err := updateFeedsUseCase.Execute(ctx); err != nil {
-					log.Error().Err(err).Msg("updating feeds")
-				}
-				ticker.Reset(updateInterval)
-			}
+		if err := updateFeedsUseCase.Execute(ctx, updateInterval); err != nil {
+			log.Fatal().Err(err).Msg("updating rss.feed.article.found events")
 		}
 	}()
 

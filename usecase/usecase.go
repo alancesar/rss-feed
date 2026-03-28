@@ -15,6 +15,11 @@ type (
 		Publish(ctx context.Context, topic string, e event.Message) error
 	}
 
+	Broker interface {
+		Publisher
+		Subscriber
+	}
+
 	FeedFetcher interface {
 		Fetch(context.Context, string) (event.Feed, error)
 	}

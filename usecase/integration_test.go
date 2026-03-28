@@ -61,7 +61,7 @@ func newTestPublisher(t *testing.T) usecase.Publisher {
 	return queue.NewWatermillBroker(queue.NewGoChannel())
 }
 
-func newTestSubscriber(t *testing.T, topic string, messages ...any) usecase.Broker {
+func newTestBroker(t *testing.T, topic string, messages ...any) usecase.Broker {
 	t.Helper()
 	broker := queue.NewWatermillBroker(queue.NewGoChannel())
 	for _, msg := range messages {

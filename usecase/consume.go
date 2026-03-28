@@ -14,11 +14,6 @@ type (
 		SaveArticle(context.Context, string, rss.Article) error
 	}
 
-	Broker interface {
-		Publisher
-		Subscriber
-	}
-
 	ConsumeFeed struct {
 		store  ArticleStore
 		broker Broker
