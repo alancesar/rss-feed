@@ -45,11 +45,24 @@ func (g Gorm) GetFeedByURL(ctx context.Context, url string) (rss.Feed, bool, err
 
 func (g Gorm) SaveArticle(ctx context.Context, feedID string, article rss.Article) error {
 	m := model.NewArticleFromDomain(article, feedID)
-	if err := g.db.WithContext(ctx).Save(&m).Error; err != nil {
+	if err := g.db.WithContext(ctx).Create(&m).Error; err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (g Gorm) GetArticleByURL(ctx context.Context, url string) (rss.Article, bool, error) {
+	var m model.Article
+	if err := g.db.WithContext(ctx).Where("url = ?", url).First(&m).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return rss.Article{}, false, nil
+		}
+
+		return rss.Article{}, false, err
+	}
+
+	return m.ToDomain(), true, nil
 }
 
 func (g Gorm) GetArticlesFromDate(ctx context.Context, date time.Time) ([]rss.Article, error) {

@@ -12,6 +12,7 @@ import (
 type (
 	ArticleStore interface {
 		SaveArticle(context.Context, string, rss.Article) error
+		GetArticleByURL(context.Context, string) (rss.Article, bool, error)
 	}
 
 	SaveArticles struct {
@@ -53,6 +54,15 @@ func (uc SaveArticles) Execute(ctx context.Context) error {
 
 		logger.Info().Str("feed", feed.Name).Int("articles", len(feed.Articles)).Msg("saving feed")
 		for _, article := range e.Articles {
+			_, exists, err := uc.store.GetArticleByURL(ctx, article.URL)
+			if err != nil {
+				logger.Error().Err(err).Msg("failed to get article by url")
+				continue
+			} else if exists {
+				logger.Info().Msg("article already exists")
+				continue
+			}
+
 			if err := uc.store.SaveArticle(ctx, feed.ID, article.ToDomain()); err != nil {
 				logger.Error().Err(err).Msg("failed to save article")
 				continue
