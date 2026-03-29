@@ -18,7 +18,6 @@ func TestConsumeImage_Execute(t *testing.T) {
 	db := newTestDB(t)
 	now := today()
 
-	createTestFeed(t, ctx, db)
 	saveTestArticle(t, ctx, db, now)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

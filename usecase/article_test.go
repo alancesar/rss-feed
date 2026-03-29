@@ -2,6 +2,7 @@ package usecase_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -12,9 +13,6 @@ import (
 func TestConsumeFeed_Execute(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
-	db := newTestDB(t)
-	createTestFeed(t, ctx, db)
 
 	now := today()
 	feedEvent := event.Feed{
@@ -38,66 +36,30 @@ func TestConsumeFeed_Execute(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewSaveArticles(db, newTestBroker(t, event.TopicFeedArticleFound, feedEvent))
+	broker := newTestBroker(t, event.TopicFeedArticleFound, feedEvent)
+
+	imageDeliveries, err := broker.Subscribe(ctx, event.TopicFeedArticleImageFound)
+	if err != nil {
+		t.Fatalf("subscribing to image topic: %v", err)
+	}
+
+	uc := usecase.NewHandleArticles(broker)
 	go func() { _ = uc.Execute(ctx) }()
 
-	awaitCondition(t, ctx, func() bool {
-		articles, _ := db.GetArticlesFromDate(ctx, now)
-		return len(articles) == 2
-	})
-
-	articles, err := db.GetArticlesFromDate(ctx, now)
-	if err != nil {
-		t.Fatalf("getting articles: %v", err)
-	}
-	if len(articles) != 2 {
-		t.Errorf("expected 2 articles, got %d", len(articles))
-	}
-}
-
-func TestConsumeFeed_Execute_SkipsDuplicateArticle(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	db := newTestDB(t)
-	createTestFeed(t, ctx, db)
-
-	now := today()
-	saveTestArticle(t, ctx, db, now)
-
-	feedEvent := event.Feed{
-		FeedID: "feed-abc",
-		Name:   "Test Blog",
-		URL:    "https://example.com/feed.xml",
-		Articles: []event.Article{
-			{
-				ArticleID:   "article-1",
-				Title:       "First Post",
-				URL:         "https://example.com/post-1",
-				PublishedAt: now,
-			},
-			{
-				ArticleID:   "article-2",
-				Title:       "Second Post",
-				URL:         "https://example.com/post-2",
-				PublishedAt: now,
-			},
-		},
-	}
-
-	uc := usecase.NewSaveArticles(db, newTestBroker(t, event.TopicFeedArticleFound, feedEvent))
-	go func() { _ = uc.Execute(ctx) }()
-
-	awaitCondition(t, ctx, func() bool {
-		articles, _ := db.GetArticlesFromDate(ctx, now)
-		return len(articles) == 2
-	})
-
-	articles, err := db.GetArticlesFromDate(ctx, now)
-	if err != nil {
-		t.Fatalf("getting articles: %v", err)
-	}
-	if len(articles) != 2 {
-		t.Errorf("expected 2 articles, got %d", len(articles))
+	select {
+	case d := <-imageDeliveries:
+		d.Ack()
+		var got event.Image
+		if err := json.Unmarshal(d.Payload, &got); err != nil {
+			t.Fatalf("unmarshaling image event: %v", err)
+		}
+		if got.ImageID != "img-1" {
+			t.Errorf("expected ImageID %q, got %q", "img-1", got.ImageID)
+		}
+		if got.ArticleID != "article-2" {
+			t.Errorf("expected ArticleID %q, got %q", "article-2", got.ArticleID)
+		}
+	case <-ctx.Done():
+		t.Fatal("timed out waiting for image event")
 	}
 }

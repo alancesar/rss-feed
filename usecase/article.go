@@ -4,31 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"rss-feed/pkg/event"
-	"rss-feed/pkg/rss"
 
 	"github.com/rs/zerolog"
 )
 
 type (
-	ArticleStore interface {
-		SaveArticle(context.Context, string, rss.Article) error
-		GetArticleByURL(context.Context, string) (rss.Article, bool, error)
-	}
-
-	SaveArticles struct {
-		store  ArticleStore
+	HandleArticles struct {
 		broker Broker
 	}
 )
 
-func NewSaveArticles(store ArticleStore, broker Broker) *SaveArticles {
-	return &SaveArticles{
-		store:  store,
+func NewHandleArticles(broker Broker) *HandleArticles {
+	return &HandleArticles{
 		broker: broker,
 	}
 }
 
-func (uc SaveArticles) Execute(ctx context.Context) error {
+func (uc HandleArticles) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Msg("starting consume articles")
 
@@ -50,24 +42,7 @@ func (uc SaveArticles) Execute(ctx context.Context) error {
 			continue
 		}
 
-		feed := e.ToDomain()
-
-		logger.Info().Str("feed", feed.Name).Int("articles", len(feed.Articles)).Msg("saving feed")
 		for _, article := range e.Articles {
-			_, exists, err := uc.store.GetArticleByURL(ctx, article.URL)
-			if err != nil {
-				logger.Error().Err(err).Msg("failed to get article by url")
-				continue
-			} else if exists {
-				logger.Info().Msg("article already exists")
-				continue
-			}
-
-			if err := uc.store.SaveArticle(ctx, feed.ID, article.ToDomain()); err != nil {
-				logger.Error().Err(err).Msg("failed to save article")
-				continue
-			}
-
 			if article.Image.ImageID == "" {
 				continue
 			}

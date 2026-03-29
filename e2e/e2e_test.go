@@ -43,9 +43,9 @@ type (
 func newInMemoryBroker() *inMemoryBroker {
 	return &inMemoryBroker{
 		queues: map[event.Topic]chan event.Delivery{
-			event.TopicFeedArticleFound: make(chan event.Delivery, 10),
-			event.TopicFeedArticleImageFound:        make(chan event.Delivery, 10),
-			event.TopicFeedJobs:         make(chan event.Delivery, 10),
+			event.TopicFeedArticleFound:      make(chan event.Delivery, 10),
+			event.TopicFeedArticleImageFound: make(chan event.Delivery, 10),
+			event.TopicFeedJobs:              make(chan event.Delivery, 10),
 		},
 	}
 }
@@ -146,7 +146,7 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	saveFeedUC := usecase.NewSaveFeed(fetcher, db, broker)
-	consumeFeedUC := usecase.NewSaveArticles(db, broker)
+	consumeFeedUC := usecase.NewHandleArticles(broker)
 	consumeImageUC := usecase.NewConsumeImage(http.DefaultClient, broker, &mockFileStorage{}, db)
 	readArticlesUC := usecase.NewReadArticles(db, &mockImageStorage{})
 
