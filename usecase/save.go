@@ -47,16 +47,13 @@ func (uc SaveFeed) Execute(ctx context.Context, url string) (rss.Feed, error) {
 	}
 
 	feed := fetchedFeed.ToDomain()
-
 	log.Info().Str("feed", fetchedFeed.Name).Msg("saving feed")
 	if err := uc.store.CreateFeed(ctx, feed); err != nil {
 		return rss.Feed{}, err
 	}
 
 	log.Info().Str("feed", fetchedFeed.Name).Int("articles", len(fetchedFeed.Articles)).Msg("publishing feed.article.found event")
-	if err := uc.publisher.Publish(ctx, "feed.article.found", event.Message{
-		Payload: event.NewPayload(fetchedFeed),
-	}); err != nil {
+	if err := uc.publisher.Publish(ctx, event.NewArticleFoundEvent(fetchedFeed)); err != nil {
 		return rss.Feed{}, err
 	}
 

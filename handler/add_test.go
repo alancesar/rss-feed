@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"rss-feed/internal/queue"
 	"strings"
 	"testing"
 
@@ -14,7 +15,7 @@ import (
 )
 
 func TestAddFeed_InvalidBody(t *testing.T) {
-	uc := usecase.NewSaveFeed(&mockFeedFetcher{}, &mockFeedStore{}, &mockPublisher{})
+	uc := usecase.NewSaveFeed(&mockFeedFetcher{}, &mockFeedStore{}, queue.NewWatermillBroker(queue.NewGoChannel()))
 
 	r := httptest.NewRequest(http.MethodPost, "/feeds", strings.NewReader("not-json"))
 	w := httptest.NewRecorder()
@@ -28,7 +29,7 @@ func TestAddFeed_InvalidBody(t *testing.T) {
 
 func TestAddFeed_DuplicateFeed(t *testing.T) {
 	store := &mockFeedStore{existingURL: "https://example.com/feed.xml"}
-	uc := usecase.NewSaveFeed(&mockFeedFetcher{}, store, &mockPublisher{})
+	uc := usecase.NewSaveFeed(&mockFeedFetcher{}, store, queue.NewWatermillBroker(queue.NewGoChannel()))
 
 	body := `{"url":"https://example.com/feed.xml"}`
 	r := httptest.NewRequest(http.MethodPost, "/feeds", strings.NewReader(body))
@@ -49,7 +50,7 @@ func TestAddFeed_Success(t *testing.T) {
 			URL:    "https://example.com/feed.xml",
 		},
 	}
-	uc := usecase.NewSaveFeed(fetcher, &mockFeedStore{}, &mockPublisher{})
+	uc := usecase.NewSaveFeed(fetcher, &mockFeedStore{}, queue.NewWatermillBroker(queue.NewGoChannel()))
 
 	body := `{"url":"https://example.com/feed.xml"}`
 	r := httptest.NewRequest(http.MethodPost, "/feeds", strings.NewReader(body))

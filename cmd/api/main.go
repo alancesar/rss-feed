@@ -22,6 +22,7 @@ import (
 	"rss-feed/internal/queue"
 	"rss-feed/internal/storage"
 	"rss-feed/usecase"
+	"time"
 
 	_ "rss-feed/docs"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"gorm.io/driver/sqlite"
@@ -39,6 +39,7 @@ import (
 
 func main() {
 	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
+	ctx := log.WithContext(context.Background())
 
 	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
@@ -53,19 +54,41 @@ func main() {
 		log.Fatal().Err(err).Msg("creating s3 client")
 	}
 
-	dial, err := amqp.Dial(os.Getenv("AMQP_URL"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("connecting to rabbitmq")
-	}
-
-	rabbitMQ := queue.NewRabbitMQ(dial)
-	publisher, err := rabbitMQ.NewPublisher("rss")
-	if err != nil {
-		log.Fatal().Err(err).Msg("creating rabbitmq publisher")
-	}
+	pubSub := queue.NewGoChannel()
+	broker := queue.NewWatermillBroker(pubSub)
 
 	readArticlesUseCase := usecase.NewReadArticles(sqliteDatabase, s3Storage)
-	saveFeedUseCase := usecase.NewSaveFeed(feed.NewGoFeed(), sqliteDatabase, publisher)
+	saveFeedUseCase := usecase.NewSaveFeed(feed.NewGoFeed(), sqliteDatabase, broker)
+	saveArticlesUseCase := usecase.NewSaveArticles(sqliteDatabase, broker)
+	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, broker, s3Storage, sqliteDatabase)
+	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), broker)
+
+	updateInterval := 30 * time.Minute
+	if v := os.Getenv("UPDATE_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			updateInterval = d
+		} else {
+			log.Warn().Str("value", v).Msg("invalid UPDATE_INTERVAL, using default 30m")
+		}
+	}
+
+	go func() {
+		if err := saveArticlesUseCase.Execute(ctx); err != nil {
+			log.Fatal().Err(err).Msg("consuming feed articles")
+		}
+	}()
+
+	go func() {
+		if err := consumeImageUseCase.Execute(ctx); err != nil {
+			log.Fatal().Err(err).Msg("consuming article images")
+		}
+	}()
+
+	go func() {
+		if err := updateFeedsUseCase.Execute(ctx, updateInterval); err != nil {
+			log.Fatal().Err(err).Msg("updating feeds")
+		}
+	}()
 
 	r := chi.NewRouter()
 	r.Use(func(next http.Handler) http.Handler {
@@ -100,7 +123,7 @@ func main() {
 
 	r.Route("/feeds", func(r chi.Router) {
 		r.Post("/", handler.AddFeed(saveFeedUseCase))
-		r.Post("/update", handler.TriggerFeedUpdate(publisher))
+		r.Post("/update", handler.TriggerFeedUpdate(broker))
 	})
 
 	r.Get("/swagger/*", httpSwagger.WrapHandler)

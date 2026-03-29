@@ -23,7 +23,7 @@ import (
 func GetFromDate(uc *usecase.ReadArticles) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rawDate := r.URL.Query().Get("date")
-		date, err := time.Parse(time.DateOnly, rawDate)
+		date, err := time.ParseInLocation(time.DateOnly, rawDate, time.UTC)
 		if err != nil {
 			http.Error(w, "invalid date param. it must be in YYYY-MM-DD pattern", http.StatusBadRequest)
 			return
@@ -54,7 +54,7 @@ func GetFromDate(uc *usecase.ReadArticles) http.HandlerFunc {
 //	@Router			/articles/today [get]
 func ListToday(uc *usecase.ReadArticles) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		articles, err := uc.Execute(r.Context(), time.Now())
+		articles, err := uc.Execute(r.Context(), time.Now().UTC())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

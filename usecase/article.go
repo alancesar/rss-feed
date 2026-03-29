@@ -14,31 +14,29 @@ type (
 		SaveArticle(context.Context, string, rss.Article) error
 	}
 
-	ConsumeFeed struct {
-		subscriber Subscriber
-		store      ArticleStore
-		publisher  Publisher
+	SaveArticles struct {
+		store  ArticleStore
+		broker Broker
 	}
 )
 
-func NewConsumeFeed(store ArticleStore, subscriber Subscriber, publisher Publisher) *ConsumeFeed {
-	return &ConsumeFeed{
-		subscriber: subscriber,
-		store:      store,
-		publisher:  publisher,
+func NewSaveArticles(store ArticleStore, broker Broker) *SaveArticles {
+	return &SaveArticles{
+		store:  store,
+		broker: broker,
 	}
 }
 
-func (uc ConsumeFeed) Execute(ctx context.Context) error {
+func (uc SaveArticles) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Msg("starting consume articles")
 
 	defer func() {
-		_ = uc.subscriber.Close()
+		_ = uc.broker.Close()
 		logger.Info().Msg("finished consume articles")
 	}()
 
-	deliveries, err := uc.subscriber.Subscribe(ctx, "rss.feed.article.found")
+	deliveries, err := uc.broker.Subscribe(ctx, event.TopicFeedArticleFound)
 	if err != nil {
 		return err
 	}
@@ -47,9 +45,7 @@ func (uc ConsumeFeed) Execute(ctx context.Context) error {
 		var e event.Feed
 		if err := json.Unmarshal(delivery.Payload, &e); err != nil {
 			logger.Error().Err(err).Msg("failed to unmarshal feed")
-			if err := delivery.Nack(false); err != nil {
-				logger.Error().Err(err).Msg("failed to nack delivery")
-			}
+			delivery.Nack(false)
 			continue
 		}
 
@@ -67,16 +63,12 @@ func (uc ConsumeFeed) Execute(ctx context.Context) error {
 			}
 
 			logger.Info().Str("article_id", article.ArticleID).Msg("publishing image event")
-			if err := uc.publisher.Publish(ctx, "feed.article.image.found", event.Message{
-				Payload: event.NewPayload(article.Image),
-			}); err != nil {
+			if err := uc.broker.Publish(ctx, event.NewImageFoundEvent(article.Image)); err != nil {
 				continue
 			}
 		}
 
-		if err := delivery.Ack(); err != nil {
-			logger.Error().Err(err).Msg("failed to ack delivery")
-		}
+		delivery.Ack()
 	}
 
 	return nil

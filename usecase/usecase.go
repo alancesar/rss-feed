@@ -7,12 +7,17 @@ import (
 
 type (
 	Subscriber interface {
-		Subscribe(ctx context.Context, queue string) (<-chan event.Delivery, error)
+		Subscribe(ctx context.Context, topic event.Topic) (<-chan event.Delivery, error)
 		Close() error
 	}
 
 	Publisher interface {
-		Publish(ctx context.Context, topic string, e event.Message) error
+		Publish(ctx context.Context, e event.Message) error
+	}
+
+	Broker interface {
+		Publisher
+		Subscriber
 	}
 
 	FeedFetcher interface {

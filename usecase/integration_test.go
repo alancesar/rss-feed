@@ -2,15 +2,16 @@ package usecase_test
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"rss-feed/internal/database"
+	"rss-feed/internal/queue"
 	"rss-feed/pkg/event"
 	"rss-feed/pkg/rss"
+	"rss-feed/usecase"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -53,15 +54,44 @@ func saveTestArticle(t *testing.T, ctx context.Context, db *database.Gorm, publi
 	}
 }
 
-// — mocks —
+// — test pub/sub helpers —
+
+func newTestPublisher(t *testing.T) usecase.Publisher {
+	t.Helper()
+	return queue.NewWatermillBroker(queue.NewGoChannel())
+}
+
+func newTestBroker(t *testing.T, topic event.Topic, messages ...any) usecase.Broker {
+	t.Helper()
+	broker := queue.NewWatermillBroker(queue.NewGoChannel())
+	for _, msg := range messages {
+		if err := broker.Publish(context.Background(), event.Message{
+			Topic:   topic,
+			Payload: event.NewPayload(msg),
+		}); err != nil {
+			t.Fatalf("publishing test message: %v", err)
+		}
+	}
+	return broker
+}
+
+func awaitCondition(t *testing.T, ctx context.Context, check func() bool) {
+	t.Helper()
+	for {
+		if check() {
+			return
+		}
+		select {
+		case <-ctx.Done():
+			t.Fatal("timed out waiting for condition")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+}
+
+// — stubs —
 
 type (
-	mockPublisher struct{}
-
-	mockSubscriber struct {
-		messages []any
-	}
-
 	mockFetcher struct {
 		feed event.Feed
 	}
@@ -79,26 +109,6 @@ type (
 
 	mockImageStorage struct{}
 )
-
-func (m *mockPublisher) Publish(_ context.Context, _ string, _ event.Message) error { return nil }
-
-func (m *mockSubscriber) Subscribe(_ context.Context, _ string) (<-chan event.Delivery, error) {
-	ch := make(chan event.Delivery)
-	go func() {
-		defer close(ch)
-		for _, msg := range m.messages {
-			payload, _ := json.Marshal(msg)
-			ch <- event.Delivery{
-				Message: event.Message{Payload: payload},
-				Ack:     func() error { return nil },
-				Nack:    func(bool) error { return nil },
-			}
-		}
-	}()
-	return ch, nil
-}
-
-func (m *mockSubscriber) Close() error { return nil }
 
 func (m *mockFetcher) Fetch(_ context.Context, _ string) (event.Feed, error) {
 	return m.feed, nil

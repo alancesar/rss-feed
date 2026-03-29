@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"rss-feed/pkg/event"
 	"rss-feed/pkg/rss"
@@ -11,7 +12,9 @@ import (
 )
 
 func TestUpdateFeeds_Execute(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	db := newTestDB(t)
 
 	for _, f := range []rss.Feed{
@@ -27,18 +30,22 @@ func TestUpdateFeeds_Execute(t *testing.T) {
 		feed: event.Feed{FeedID: "x", Name: "Feed"},
 	}
 
-	uc := usecase.NewUpdateFeeds(db, fetcher, &mockPublisher{})
-	if err := uc.Execute(ctx); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	uc := usecase.NewUpdateFeeds(db, fetcher, newTestBroker(t, event.TopicFeedJobs))
+	go func() { _ = uc.Execute(ctx, 10*time.Millisecond) }()
 
-	if len(fetcher.calls) != 2 {
-		t.Errorf("expected fetcher to be called 2 times, got %d", len(fetcher.calls))
+	awaitCondition(t, ctx, func() bool {
+		return len(fetcher.calls) >= 2
+	})
+
+	if len(fetcher.calls) < 2 {
+		t.Errorf("expected fetcher to be called at least 2 times, got %d", len(fetcher.calls))
 	}
 }
 
 func TestUpdateFeeds_Execute_SkipsFailedFeeds(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	db := newTestDB(t)
 
 	for _, f := range []rss.Feed{
@@ -59,10 +66,12 @@ func TestUpdateFeeds_Execute_SkipsFailedFeeds(t *testing.T) {
 		return event.Feed{FeedID: "x", Name: "Feed", URL: url}, nil
 	}}
 
-	uc := usecase.NewUpdateFeeds(db, fetcher, &mockPublisher{})
-	if err := uc.Execute(ctx); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	uc := usecase.NewUpdateFeeds(db, fetcher, newTestBroker(t, event.TopicFeedJobs))
+	go func() { _ = uc.Execute(ctx, 10*time.Millisecond) }()
+
+	awaitCondition(t, ctx, func() bool {
+		return len(successfulURLs) >= 1
+	})
 
 	if len(successfulURLs) != 1 {
 		t.Errorf("expected 1 successful fetch, got %d", len(successfulURLs))

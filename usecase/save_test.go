@@ -27,7 +27,7 @@ func TestSaveFeed_Execute(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewSaveFeed(fetcher, db, &mockPublisher{})
+	uc := usecase.NewSaveFeed(fetcher, db, newTestPublisher(t))
 	feed, err := uc.Execute(ctx, "https://example.com/feed.xml")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -55,7 +55,7 @@ func TestSaveFeed_Execute_Duplicate(t *testing.T) {
 
 	createTestFeed(t, ctx, db)
 
-	uc := usecase.NewSaveFeed(&mockFetcher{}, db, &mockPublisher{})
+	uc := usecase.NewSaveFeed(&mockFetcher{}, db, newTestPublisher(t))
 	_, err := uc.Execute(ctx, "https://example.com/feed.xml")
 	if err == nil {
 		t.Fatal("expected error for duplicate feed, got nil")

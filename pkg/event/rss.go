@@ -7,10 +7,11 @@ import (
 
 type (
 	Feed struct {
-		FeedID   string    `json:"feed_id"`
-		Name     string    `json:"name"`
-		URL      string    `json:"url"`
-		Articles []Article `json:"articles"`
+		FeedID    string     `json:"feed_id"`
+		Name      string     `json:"name"`
+		URL       string     `json:"url"`
+		UpdatedAt *time.Time `json:"updated_at,omitempty"`
+		Articles  []Article  `json:"articles"`
 	}
 
 	Image struct {

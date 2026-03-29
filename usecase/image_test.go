@@ -5,15 +5,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"rss-feed/pkg/event"
 	"rss-feed/usecase"
 )
 
 func TestConsumeImage_Execute(t *testing.T) {
-	ctx := context.Background()
-	db := newTestDB(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
+	db := newTestDB(t)
 	now := today()
 
 	createTestFeed(t, ctx, db)
@@ -31,11 +33,14 @@ func TestConsumeImage_Execute(t *testing.T) {
 		URL:       srv.URL + "/image.jpg",
 	}
 
-	subscriber := &mockSubscriber{messages: []any{imgEvent}}
+	subscriber := newTestBroker(t, event.TopicFeedArticleImageFound, imgEvent)
 	uc := usecase.NewConsumeImage(http.DefaultClient, subscriber, &mockStorage{}, db)
-	if err := uc.Execute(ctx); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	go func() { _ = uc.Execute(ctx) }()
+
+	awaitCondition(t, ctx, func() bool {
+		articles, _ := db.GetArticlesFromDate(ctx, now)
+		return len(articles) == 1 && len(articles[0].Images) == 1
+	})
 
 	articles, err := db.GetArticlesFromDate(ctx, now)
 	if err != nil {

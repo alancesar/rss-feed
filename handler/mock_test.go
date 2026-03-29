@@ -22,8 +22,6 @@ type (
 	mockFeedStore struct {
 		existingURL string
 	}
-
-	mockPublisher struct{}
 )
 
 func (m *mockArticlesStore) GetArticlesFromDate(_ context.Context, _ time.Time) ([]rss.Article, error) {
@@ -48,5 +46,3 @@ func (m *mockFeedStore) GetFeedByURL(_ context.Context, url string) (rss.Feed, b
 func (m *mockFeedStore) CreateFeed(_ context.Context, _ rss.Feed) error {
 	return nil
 }
-
-func (m *mockPublisher) Publish(_ context.Context, _ string, _ event.Message) error { return nil }
