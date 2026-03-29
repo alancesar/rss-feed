@@ -50,23 +50,39 @@ func (b *WatermillBroker) Subscribe(ctx context.Context, topic event.Topic) (<-c
 	deliveries := make(chan event.Delivery)
 	go func() {
 		defer close(deliveries)
-		for msg := range messages {
-			headers := make(map[string]interface{}, len(msg.Metadata))
-			for k, v := range msg.Metadata {
-				headers[k] = v
-			}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg, ok := <-messages:
+				if !ok {
+					return
+				}
 
-			deliveries <- event.Delivery{
-				Message: event.Message{
-					Headers: headers,
-					Payload: event.Payload(msg.Payload),
-				},
-				Ack: func() {
-					msg.Ack()
-				},
-				Nack: func(_ bool) {
-					msg.Nack()
-				},
+				headers := make(map[string]interface{}, len(msg.Metadata))
+				for k, v := range msg.Metadata {
+					headers[k] = v
+				}
+
+				delivery := event.Delivery{
+					Message: event.Message{
+						Topic:   topic,
+						Headers: headers,
+						Payload: event.Payload(msg.Payload),
+					},
+					Ack: func() {
+						msg.Ack()
+					},
+					Nack: func(_ bool) {
+						msg.Nack()
+					},
+				}
+
+				select {
+				case deliveries <- delivery:
+				case <-ctx.Done():
+					return
+				}
 			}
 		}
 	}()
