@@ -49,6 +49,9 @@ func TestNewArticleFromDomain(t *testing.T) {
 	article := rss.Article{
 		ID:          "article-1",
 		Title:       "First Post",
+		Description: "A short description",
+		Content:     "Full content here",
+		Categories:  []string{"tech", "go"},
 		URL:         "https://example.com/post-1",
 		PublishedAt: publishedAt,
 	}
@@ -63,6 +66,12 @@ func TestNewArticleFromDomain(t *testing.T) {
 	}
 	if got.Title != article.Title {
 		t.Errorf("expected Title %q, got %q", article.Title, got.Title)
+	}
+	if got.Description != article.Description {
+		t.Errorf("expected Description %q, got %q", article.Description, got.Description)
+	}
+	if got.Content != article.Content {
+		t.Errorf("expected Content %q, got %q", article.Content, got.Content)
 	}
 	if got.URL != article.URL {
 		t.Errorf("expected URL %q, got %q", article.URL, got.URL)
@@ -116,6 +125,9 @@ func TestArticle_ToDomain(t *testing.T) {
 	m := model.Article{
 		ID:          "article-1",
 		Title:       "First Post",
+		Description: "A short description",
+		Content:     "Full content here",
+		Categories:  []byte(`["tech","go"]`),
 		URL:         "https://example.com/post-1",
 		PublishedAt: publishedAt,
 		Feed:        model.Feed{ID: "feed-abc", Name: "Test Blog", URL: "https://example.com/feed.xml"},
@@ -131,6 +143,18 @@ func TestArticle_ToDomain(t *testing.T) {
 	}
 	if got.Title != m.Title {
 		t.Errorf("expected Title %q, got %q", m.Title, got.Title)
+	}
+	if got.Description != m.Description {
+		t.Errorf("expected Description %q, got %q", m.Description, got.Description)
+	}
+	if got.Content != m.Content {
+		t.Errorf("expected Content %q, got %q", m.Content, got.Content)
+	}
+	if len(got.Categories) != 2 {
+		t.Fatalf("expected 2 categories, got %d", len(got.Categories))
+	}
+	if got.Categories[0] != "tech" || got.Categories[1] != "go" {
+		t.Errorf("expected categories [tech go], got %v", got.Categories)
 	}
 	if got.URL != m.URL {
 		t.Errorf("expected URL %q, got %q", m.URL, got.URL)

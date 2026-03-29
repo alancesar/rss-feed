@@ -38,6 +38,9 @@ type (
 	Article struct {
 		ID          string
 		Title       string
+		Description string
+		Content     string
+		Categories  []string
 		URL         string
 		Feed        Feed
 		Images      []Image

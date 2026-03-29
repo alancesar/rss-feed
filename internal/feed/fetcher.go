@@ -40,12 +40,15 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 	feedID := hashFromString(feed.FeedLink)
 	articles := make([]event.Article, len(feed.Items))
 	for i, item := range feed.Items {
-		articleID := hashFromString(item.Link)
+		articleID := hashFromString(item.GUID)
 		article := event.Article{
-			ArticleID: articleID,
-			FeedID:    feedID,
-			Title:     item.Title,
-			URL:       item.Link,
+			ArticleID:   articleID,
+			FeedID:      feedID,
+			Title:       item.Title,
+			Description: item.Description,
+			Content:     item.Content,
+			Categories:  item.Categories,
+			URL:         item.Link,
 		}
 
 		if item.PublishedParsed != nil {

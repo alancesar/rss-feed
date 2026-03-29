@@ -13,6 +13,9 @@ func TestArticle_ToDomain(t *testing.T) {
 		ArticleID:   "article-1",
 		FeedID:      "feed-abc",
 		Title:       "First Post",
+		Description: "A short description",
+		Content:     "Full content here",
+		Categories:  []string{"tech", "go"},
 		URL:         "https://example.com/post-1",
 		PublishedAt: publishedAt,
 	}
@@ -24,6 +27,20 @@ func TestArticle_ToDomain(t *testing.T) {
 	}
 	if got.Title != a.Title {
 		t.Errorf("expected Title %q, got %q", a.Title, got.Title)
+	}
+	if got.Description != a.Description {
+		t.Errorf("expected Description %q, got %q", a.Description, got.Description)
+	}
+	if got.Content != a.Content {
+		t.Errorf("expected Content %q, got %q", a.Content, got.Content)
+	}
+	if len(got.Categories) != len(a.Categories) {
+		t.Fatalf("expected %d categories, got %d", len(a.Categories), len(got.Categories))
+	}
+	for i, c := range a.Categories {
+		if got.Categories[i] != c {
+			t.Errorf("categories[%d]: expected %q, got %q", i, c, got.Categories[i])
+		}
 	}
 	if got.URL != a.URL {
 		t.Errorf("expected URL %q, got %q", a.URL, got.URL)
