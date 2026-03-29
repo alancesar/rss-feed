@@ -27,7 +27,7 @@ func NewUpdateFeedCommand() Message {
 
 func NewImageFoundEvent(image Image) Message {
 	return Message{
-		Topic:   TopicFeedFound,
+		Topic:   TopicFeedArticleImageFound,
 		Payload: NewPayload(image),
 	}
 }
