@@ -12,7 +12,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"net"
 	"net/http"
 	"os"
@@ -91,6 +90,7 @@ func main() {
 	}()
 
 	r := chi.NewRouter()
+	r.Use(render.SetContentType(render.ContentTypeJSON))
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
@@ -105,16 +105,6 @@ func main() {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"http://localhost*"},
 	}))
-
-	render.Respond = func(w http.ResponseWriter, r *http.Request, v interface{}) {
-		w.Header().Set("Content-Type", "application/json")
-		if status, ok := r.Context().Value(render.StatusCtxKey).(int); ok {
-			w.WriteHeader(status)
-		}
-		enc := json.NewEncoder(w)
-		enc.SetEscapeHTML(false)
-		_ = enc.Encode(v)
-	}
 
 	r.Route("/articles", func(r chi.Router) {
 		r.Get("/", handler.GetFromDate(readArticlesUseCase))
