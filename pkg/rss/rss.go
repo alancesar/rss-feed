@@ -5,8 +5,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"html"
 	"time"
+
+	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
 )
 
 var (
@@ -61,7 +62,22 @@ func NewImage(path string, imgType ImageType) Image {
 }
 
 func (a Article) ToMarkdown() string {
-	return fmt.Sprintf(`[%s](%s)`, html.UnescapeString(a.Title), a.URL)
+	description, err := htmltomarkdown.ConvertString(a.Description)
+	if err != nil {
+		description = a.Description
+	}
+
+	content, err := htmltomarkdown.ConvertString(a.Content)
+	if err != nil {
+		content = a.Content
+	}
+
+	body := description
+	if content != "" {
+		body = body + "\n\n---\n\n" + content
+	}
+
+	return fmt.Sprintf("# %s\n\n%s", a.Title, body)
 }
 
 func hashFromString(input string) string {
