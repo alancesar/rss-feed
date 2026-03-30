@@ -32,9 +32,9 @@ func NewImageFoundEvent(image Image) Message {
 	}
 }
 
-func NewArticleFoundEvent(feed Feed) Message {
+func NewFeedFoundEvent(feed Feed) Message {
 	return Message{
-		Topic:   TopicFeedArticleFound,
+		Topic:   TopicFeedFound,
 		Payload: NewPayload(feed),
 	}
 }

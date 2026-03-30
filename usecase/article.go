@@ -29,7 +29,7 @@ func (uc HandleArticles) Execute(ctx context.Context) error {
 		logger.Info().Msg("finished consume articles")
 	}()
 
-	deliveries, err := uc.broker.Subscribe(ctx, event.TopicFeedArticleFound)
+	deliveries, err := uc.broker.Subscribe(ctx, event.TopicFeedFound)
 	if err != nil {
 		return err
 	}

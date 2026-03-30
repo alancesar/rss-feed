@@ -36,7 +36,7 @@ func TestConsumeFeed_Execute(t *testing.T) {
 		},
 	}
 
-	broker := newTestBroker(t, event.TopicFeedArticleFound, feedEvent)
+	broker := newTestBroker(t, event.TopicFeedFound, feedEvent)
 
 	imageDeliveries, err := broker.Subscribe(ctx, event.TopicFeedArticleImageFound)
 	if err != nil {

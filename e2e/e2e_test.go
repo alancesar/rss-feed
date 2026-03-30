@@ -43,7 +43,7 @@ type (
 func newInMemoryBroker() *inMemoryBroker {
 	return &inMemoryBroker{
 		queues: map[event.Topic]chan event.Delivery{
-			event.TopicFeedArticleFound:      make(chan event.Delivery, 10),
+			event.TopicFeedFound:             make(chan event.Delivery, 10),
 			event.TopicFeedArticleImageFound: make(chan event.Delivery, 10),
 			event.TopicFeedJobs:              make(chan event.Delivery, 10),
 		},
