@@ -58,7 +58,7 @@ func main() {
 
 	readArticlesUseCase := usecase.NewReadArticles(sqliteDatabase, s3Storage)
 	saveFeedUseCase := usecase.NewSaveFeed(feed.NewGoFeed(), sqliteDatabase, broker)
-	handleArticlesUseCase := usecase.NewHandleArticles(broker)
+	handleFeedUseCase := usecase.NewHandleFeed(broker)
 	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, broker, s3Storage, sqliteDatabase)
 	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), broker)
 
@@ -72,7 +72,7 @@ func main() {
 	}
 
 	go func() {
-		if err := handleArticlesUseCase.Execute(ctx); err != nil {
+		if err := handleFeedUseCase.Execute(ctx); err != nil {
 			log.Fatal().Err(err).Msg("consuming feed articles")
 		}
 	}()

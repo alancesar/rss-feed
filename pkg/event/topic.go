@@ -5,7 +5,7 @@ type (
 )
 
 const (
-	TopicFeedFound             Topic = "rss.feed.found"
-	TopicFeedArticleImageFound Topic = "rss.feed.article.image.found"
-	TopicFeedJobs              Topic = "rss.feed.jobs"
+	TopicFeedFound        Topic = "rss.feed.found"
+	TopicFeedArticleFound Topic = "rss.feed.article.found"
+	TopicFeedJobs         Topic = "rss.feed.jobs"
 )

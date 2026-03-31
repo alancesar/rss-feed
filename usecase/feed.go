@@ -9,18 +9,18 @@ import (
 )
 
 type (
-	HandleArticles struct {
+	HandleFeed struct {
 		broker Broker
 	}
 )
 
-func NewHandleArticles(broker Broker) *HandleArticles {
-	return &HandleArticles{
+func NewHandleFeed(broker Broker) *HandleFeed {
+	return &HandleFeed{
 		broker: broker,
 	}
 }
 
-func (uc HandleArticles) Execute(ctx context.Context) error {
+func (uc HandleFeed) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Msg("starting consume articles")
 
@@ -43,13 +43,10 @@ func (uc HandleArticles) Execute(ctx context.Context) error {
 		}
 
 		for _, article := range e.Articles {
-			if article.Image.ImageID == "" {
-				continue
-			}
+			logger.Info().Str("article_id", article.ArticleID).Msg("publishing article event")
 
-			logger.Info().Str("article_id", article.ArticleID).Msg("publishing image event")
-			if err := uc.broker.Publish(ctx, event.NewImageFoundEvent(article.Image)); err != nil {
-				continue
+			if err := uc.broker.Publish(ctx, event.NewArticleFound(article)); err != nil {
+				logger.Error().Err(err).Msg("failed to publish article")
 			}
 		}
 

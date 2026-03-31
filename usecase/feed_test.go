@@ -38,23 +38,23 @@ func TestConsumeFeed_Execute(t *testing.T) {
 
 	broker := newTestBroker(t, event.TopicFeedFound, feedEvent)
 
-	imageDeliveries, err := broker.Subscribe(ctx, event.TopicFeedArticleImageFound)
+	articleDeliveries, err := broker.Subscribe(ctx, event.TopicFeedArticleFound)
 	if err != nil {
-		t.Fatalf("subscribing to image topic: %v", err)
+		t.Fatalf("subscribing to article topic: %v", err)
 	}
 
-	uc := usecase.NewHandleArticles(broker)
+	uc := usecase.NewHandleFeed(broker)
 	go func() { _ = uc.Execute(ctx) }()
 
 	select {
-	case d := <-imageDeliveries:
+	case d := <-articleDeliveries:
 		d.Ack()
-		var got event.Image
+		var got event.Article
 		if err := json.Unmarshal(d.Payload, &got); err != nil {
 			t.Fatalf("unmarshaling image event: %v", err)
 		}
-		if got.ImageID != "img-1" {
-			t.Errorf("expected ImageID %q, got %q", "img-1", got.ImageID)
+		if got.Image.ImageID != "img-1" {
+			t.Errorf("expected ImageID %q, got %q", "img-1", got.Image.ImageID)
 		}
 		if got.ArticleID != "article-2" {
 			t.Errorf("expected ArticleID %q, got %q", "article-2", got.ArticleID)

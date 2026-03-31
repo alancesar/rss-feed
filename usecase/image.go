@@ -49,21 +49,27 @@ func (uc ConsumeImage) Execute(ctx context.Context) error {
 		logger.Info().Msg("finished consume image")
 	}()
 
-	deliveries, err := uc.subscriber.Subscribe(ctx, event.TopicFeedArticleImageFound)
+	deliveries, err := uc.subscriber.Subscribe(ctx, event.TopicFeedArticleFound)
 	if err != nil {
 		return err
 	}
 
 	for delivery := range deliveries {
-		var e event.Image
+		var e event.Article
 		if err := json.Unmarshal(delivery.Payload, &e); err != nil {
 			logger.Error().Err(err).Msg("failed to unmarshal image")
 			delivery.Nack(false)
 			continue
 		}
 
-		logger.Info().Str("url", e.URL).Str("article_id", e.ArticleID).Msg("downloading image")
-		if err := uc.saveImageToStorage(ctx, e.ArticleID, e.URL); err != nil {
+		img := e.Image
+		if img.ImageID == "" {
+			logger.Info().Str("article_id", e.ArticleID).Msg("image id is empty")
+			continue
+		}
+
+		logger.Info().Str("url", img.URL).Str("article_id", e.ArticleID).Msg("downloading image")
+		if err := uc.saveImageToStorage(ctx, e.ArticleID, img.URL); err != nil {
 			delivery.Nack(true)
 			continue
 		}
