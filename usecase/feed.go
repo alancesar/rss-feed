@@ -22,11 +22,11 @@ func NewHandleFeed(broker Broker) *HandleFeed {
 
 func (uc HandleFeed) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
-	logger.Info().Msg("starting consume articles")
+	logger.Info().Msg("starting consume feed")
 
 	defer func() {
 		_ = uc.broker.Close()
-		logger.Info().Msg("finished consume articles")
+		logger.Info().Msg("finished consume feed")
 	}()
 
 	deliveries, err := uc.broker.Subscribe(ctx, event.TopicFeedFound)

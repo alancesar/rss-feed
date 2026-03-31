@@ -43,6 +43,23 @@ func (g Gorm) GetFeedByURL(ctx context.Context, url string) (rss.Feed, bool, err
 	return m.ToDomain(), true, nil
 }
 
+func (g Gorm) GetArticleByID(ctx context.Context, articleID string) (rss.Article, bool, error) {
+	var m model.Article
+	if err := g.db.WithContext(ctx).
+		Where("id = ?", articleID).
+		Preload("Feed").
+		Preload("Images").
+		First(&m).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return rss.Article{}, false, nil
+		}
+
+		return rss.Article{}, false, err
+	}
+
+	return m.ToDomain(), true, nil
+}
+
 func (g Gorm) GetArticlesFromDate(ctx context.Context, date time.Time) ([]rss.Article, error) {
 	var articles []model.Article
 	if err := g.db.WithContext(ctx).

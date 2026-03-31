@@ -25,6 +25,7 @@ import (
 
 	_ "rss-feed/docs"
 
+	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -53,13 +54,26 @@ func main() {
 		log.Fatal().Err(err).Msg("creating s3 client")
 	}
 
+	client, err := chroma.NewHTTPClient(
+		chroma.WithBaseURL("https://chroma.alancesar.org"),
+	)
+
+	defer func() { _ = client.Close() }()
+
+	chromaDatabase, err := database.NewChroma(ctx, client)
+	if err != nil {
+		log.Fatal().Err(err).Msg("creating chroma database")
+	}
+
 	pubSub := queue.NewGoChannel()
 	broker := queue.NewWatermillBroker(pubSub)
 
 	readArticlesUseCase := usecase.NewReadArticles(sqliteDatabase, s3Storage)
 	saveFeedUseCase := usecase.NewSaveFeed(feed.NewGoFeed(), sqliteDatabase, broker)
+	findArticlesUseCase := usecase.NewFind(chromaDatabase, sqliteDatabase)
 	handleFeedUseCase := usecase.NewHandleFeed(broker)
 	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, broker, s3Storage, sqliteDatabase)
+	handleArticleUseCase := usecase.NewArticle(broker, chromaDatabase)
 	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), broker)
 
 	updateInterval := 30 * time.Minute
@@ -80,6 +94,12 @@ func main() {
 	go func() {
 		if err := consumeImageUseCase.Execute(ctx); err != nil {
 			log.Fatal().Err(err).Msg("consuming article images")
+		}
+	}()
+
+	go func() {
+		if err := handleArticleUseCase.Execute(ctx); err != nil {
+			log.Fatal().Err(err).Msg("handling feed articles")
 		}
 	}()
 
@@ -109,6 +129,7 @@ func main() {
 	r.Route("/articles", func(r chi.Router) {
 		r.Get("/", handler.GetFromDate(readArticlesUseCase))
 		r.Get("/today", handler.ListToday(readArticlesUseCase))
+		r.Get("/search", handler.FindArticles(findArticlesUseCase))
 	})
 
 	r.Route("/feeds", func(r chi.Router) {
