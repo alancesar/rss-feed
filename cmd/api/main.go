@@ -57,6 +57,9 @@ func main() {
 	client, err := chroma.NewHTTPClient(
 		chroma.WithBaseURL("https://chroma.alancesar.org"),
 	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("creating chroma client")
+	}
 
 	defer func() { _ = client.Close() }()
 

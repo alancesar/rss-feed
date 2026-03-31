@@ -31,6 +31,11 @@ func (uc *Article) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Msg("starting consume articles")
 
+	defer func() {
+		_ = uc.subscriber.Close()
+		logger.Info().Msg("finished consume articles")
+	}()
+
 	deliveries, err := uc.subscriber.Subscribe(ctx, event.TopicFeedArticleFound)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to subscribe to articles")
