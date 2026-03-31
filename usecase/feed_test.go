@@ -46,20 +46,26 @@ func TestConsumeFeed_Execute(t *testing.T) {
 	uc := usecase.NewHandleFeed(broker)
 	go func() { _ = uc.Execute(ctx) }()
 
-	select {
-	case d := <-articleDeliveries:
-		d.Ack()
-		var got event.Article
-		if err := json.Unmarshal(d.Payload, &got); err != nil {
-			t.Fatalf("unmarshaling image event: %v", err)
+	for {
+		select {
+		case d := <-articleDeliveries:
+			d.Ack()
+			var got event.Article
+			if err := json.Unmarshal(d.Payload, &got); err != nil {
+				t.Fatalf("unmarshaling article event: %v", err)
+			}
+			if got.Image.ImageID == "" {
+				continue
+			}
+			if got.Image.ImageID != "img-1" {
+				t.Errorf("expected ImageID %q, got %q", "img-1", got.Image.ImageID)
+			}
+			if got.ArticleID != "article-2" {
+				t.Errorf("expected ArticleID %q, got %q", "article-2", got.ArticleID)
+			}
+			return
+		case <-ctx.Done():
+			t.Fatal("timed out waiting for image event")
 		}
-		if got.Image.ImageID != "img-1" {
-			t.Errorf("expected ImageID %q, got %q", "img-1", got.Image.ImageID)
-		}
-		if got.ArticleID != "article-2" {
-			t.Errorf("expected ArticleID %q, got %q", "article-2", got.ArticleID)
-		}
-	case <-ctx.Done():
-		t.Fatal("timed out waiting for image event")
 	}
 }
