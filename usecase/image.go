@@ -65,6 +65,7 @@ func (uc ConsumeImage) Execute(ctx context.Context) error {
 		img := e.Image
 		if img.ImageID == "" {
 			logger.Info().Str("article_id", e.ArticleID).Msg("image id is empty")
+			delivery.Ack()
 			continue
 		}
 
