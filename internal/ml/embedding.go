@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -70,6 +72,11 @@ func (c *OllamaClient) GetEmbeddings(ctx context.Context, text string) (Embeddin
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return Embedding{}, fmt.Errorf("ollama returned non-2xx status %d: %s", resp.StatusCode, string(body))
+	}
 
 	var output embeddingResponse
 	if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
