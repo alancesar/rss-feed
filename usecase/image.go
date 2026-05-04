@@ -57,7 +57,7 @@ func (uc ConsumeImage) Execute(ctx context.Context) error {
 	for delivery := range deliveries {
 		var e event.Article
 		if err := json.Unmarshal(delivery.Payload, &e); err != nil {
-			logger.Error().Err(err).Msg("failed to unmarshal image")
+			logger.Error().Err(err).Msg("failed to unmarshal article")
 			delivery.Nack(false)
 			continue
 		}
