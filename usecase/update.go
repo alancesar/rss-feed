@@ -97,7 +97,7 @@ func (uc UpdateFeeds) updateFeeds(ctx context.Context) error {
 			continue
 		}
 
-		logger.Info().Str("feed", fetchedFeed.Name).Int("articles", len(fetchedFeed.Articles)).Msg("publishing feed.article.found event")
+		logger.Info().Str("feed", fetchedFeed.Name).Int("articles", len(fetchedFeed.Articles)).Msg("publishing rss.feed.found event")
 		if err := uc.broker.Publish(ctx, event.NewFeedFoundEvent(fetchedFeed)); err != nil {
 			return err
 		}
