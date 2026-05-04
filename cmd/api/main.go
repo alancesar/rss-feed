@@ -18,8 +18,10 @@ import (
 	"rss-feed/handler"
 	"rss-feed/internal/database"
 	"rss-feed/internal/feed"
+	"rss-feed/internal/ml"
 	"rss-feed/internal/queue"
 	"rss-feed/internal/storage"
+	"rss-feed/pkg/markdown"
 	"rss-feed/usecase"
 	"time"
 
@@ -55,7 +57,7 @@ func main() {
 	}
 
 	client, err := chroma.NewHTTPClient(
-		chroma.WithBaseURL("https://chroma.alancesar.org"),
+		chroma.WithBaseURL(os.Getenv("CHROMA_URL")),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("creating chroma client")
@@ -63,11 +65,15 @@ func main() {
 
 	defer func() { _ = client.Close() }()
 
-	chromaDatabase, err := database.NewChroma(ctx, client)
+	collection, err := client.GetOrCreateCollection(ctx, "articles")
 	if err != nil {
-		log.Fatal().Err(err).Msg("creating chroma database")
+		log.Fatal().Err(err).Msg("getting or creating chroma collection")
 	}
 
+	chromaDatabase := database.NewChroma(collection, ml.NewOllamaClient(http.DefaultClient, ml.Properties{
+		Model: os.Getenv("OLLAMA_MODEL"),
+		URL:   os.Getenv("OLLAMA_URL"),
+	}), markdown.NewParser())
 	pubSub := queue.NewGoChannel()
 	broker := queue.NewWatermillBroker(pubSub)
 
