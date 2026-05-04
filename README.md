@@ -21,6 +21,9 @@ All configuration is done via environment variables. Copy `.env.example` to `.en
 | `AMQP_URL`        | RabbitMQ connection URL (TLS)  | `amqps://user:pass@amqp.example.com`     |
 | `PORT`            | HTTP port for the API server   | `8080` (default)                         |
 | `UPDATE_INTERVAL` | Feed refresh interval (worker) | `30m` (default), accepts any Go duration |
+| `CHROMA_URL`      | Chroma vector store base URL   | `https://chroma.example.com`             |
+| `OLLAMA_URL`      | Ollama embedding API endpoint  | `http://localhost:11434/api/embed`        |
+| `OLLAMA_MODEL`    | Ollama embedding model name    | `nomic-embed-text`                       |
 
 ## Running
 

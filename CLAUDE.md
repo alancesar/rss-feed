@@ -73,6 +73,8 @@ Three tables: `feeds`, `articles`, `images` (`images` has a FK to `articles`, st
 - **RabbitMQ** — exchange `rss`, queues `rss.feed.article.found`, `rss.feed.article.image.found`, and `rss.feed.jobs`
 - **S3-compatible storage** — configured via `storage.NewS3(endpoint, region, bucket)`; images stored under `images/original/`
 - **Presigned URLs** — generated on read with 1h TTL
+- **Chroma** — vector store for semantic search; configured via `CHROMA_URL` env var
+- **Ollama** — embedding model provider; configured via `OLLAMA_URL` and `OLLAMA_MODEL` env vars
 
 ## Key Dependencies
 
