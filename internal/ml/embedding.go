@@ -74,7 +74,10 @@ func (c *OllamaClient) GetEmbeddings(ctx context.Context, text string) (Embeddin
 	}()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return Embedding{}, fmt.Errorf("ollama returned non-2xx status %d (could not read body: %w)", resp.StatusCode, readErr)
+		}
 		return Embedding{}, fmt.Errorf("ollama returned non-2xx status %d: %s", resp.StatusCode, string(body))
 	}
 
