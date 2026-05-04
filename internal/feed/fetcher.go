@@ -2,11 +2,10 @@ package feed
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"rss-feed/pkg/event"
+	"rss-feed/pkg/hash"
 
 	"github.com/mmcdole/gofeed"
 )
@@ -37,10 +36,10 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 		return event.Feed{}, ErrEmptyFeed
 	}
 
-	feedID := hashFromString(feed.FeedLink)
+	feedID := hash.Hash(feed.FeedLink)
 	articles := make([]event.Article, len(feed.Items))
 	for i, item := range feed.Items {
-		articleID := hashFromString(item.GUID)
+		articleID := hash.Hash(item.GUID)
 		article := event.Article{
 			ArticleID:   articleID,
 			FeedID:      feedID,
@@ -57,7 +56,7 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 
 		if item.Image != nil {
 			article.Image = event.Image{
-				ImageID:   hashFromString(item.Image.URL),
+				ImageID:   hash.Hash(articleID, item.Image.URL),
 				ArticleID: articleID,
 				URL:       item.Image.URL,
 			}
@@ -73,9 +72,4 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 		UpdatedAt: feed.UpdatedParsed,
 		Articles:  articles,
 	}, nil
-}
-
-func hashFromString(input string) string {
-	hash := sha256.Sum256([]byte(input))
-	return hex.EncodeToString(hash[:])
 }
