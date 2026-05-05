@@ -23,6 +23,7 @@ type (
 	Article struct {
 		ArticleID   string    `json:"article_id"`
 		FeedID      string    `json:"feed_id"`
+		FeedName    string    `json:"feed_name"`
 		Title       string    `json:"title"`
 		Description string    `json:"description"`
 		Content     string    `json:"content"`
@@ -42,6 +43,10 @@ func (a Article) ToDomain() rss.Article {
 		Categories:  a.Categories,
 		URL:         a.URL,
 		PublishedAt: a.PublishedAt,
+		Feed: rss.Feed{
+			ID:   a.FeedID,
+			Name: a.FeedName,
+		},
 	}
 }
 

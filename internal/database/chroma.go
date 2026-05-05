@@ -84,7 +84,7 @@ func (c *Chroma) FindArticlesIDsByTerm(ctx context.Context, term string) ([]stri
 	}
 
 	// Chroma returns results in ascending distance order, so we can stop at the first exceeded threshold.
-	hasDistances := len(distanceGroups) > 0
+	hasDistances := len(distanceGroups) > 0 && len(distanceGroups[0]) == len(idGroups[0])
 	ids := make([]string, 0, len(idGroups[0]))
 	for i, id := range idGroups[0] {
 		if hasDistances && float64(distanceGroups[0][i]) > maxDistance {

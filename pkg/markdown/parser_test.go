@@ -1,6 +1,7 @@
 package markdown_test
 
 import (
+	"strings"
 	"testing"
 
 	"rss-feed/pkg/markdown"
@@ -111,8 +112,8 @@ func TestParser_Parse_BlankLinesStripped(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, line := range []string{got} {
-		if line == "" {
+	for _, line := range strings.Split(got, "\n") {
+		if strings.TrimSpace(line) == "" {
 			t.Errorf("expected no blank lines in output, got %q", got)
 		}
 	}
