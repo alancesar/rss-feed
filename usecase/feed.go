@@ -49,6 +49,7 @@ func (uc HandleFeed) Execute(ctx context.Context) error {
 			if err := uc.broker.Publish(ctx, event.NewArticleFound(article)); err != nil {
 				logger.Error().Err(err).Msg("failed to publish article")
 				failed = true
+				break
 			}
 		}
 
