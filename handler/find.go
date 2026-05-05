@@ -6,6 +6,7 @@ import (
 	"rss-feed/usecase"
 
 	"github.com/go-chi/render"
+	"github.com/rs/zerolog"
 )
 
 // FindArticles godoc
@@ -27,14 +28,18 @@ func FindArticles(uc *usecase.Find) http.HandlerFunc {
 			return
 		}
 
+		logger := zerolog.Ctx(r.Context())
+
 		articles, err := uc.Execute(r.Context(), term)
 		if err != nil {
+			logger.Error().Err(err).Msg("failed to find articles")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		render.Status(r, http.StatusOK)
 		if err := render.Render(w, r, presenter.NewArticleListResponse(articles)); err != nil {
+			logger.Error().Err(err).Msg("failed to render articles response")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
