@@ -51,13 +51,13 @@ func (uc HandleFeed) Execute(ctx context.Context) error {
 
 		failed := false
 		for _, article := range e.Articles {
-			logger.Info().Str("article_id", article.ArticleID).Msg("publishing article event")
-
 			if err := uc.store.SaveArticle(ctx, article.ToDomain()); err != nil {
 				logger.Error().Err(err).Msg("failed to save article")
 				failed = true
 				break
 			}
+
+			logger.Info().Str("article_id", article.ArticleID).Msg("publishing article event")
 
 			if err := uc.broker.Publish(ctx, event.NewArticleFound(article)); err != nil {
 				logger.Error().Err(err).Msg("failed to publish article")
