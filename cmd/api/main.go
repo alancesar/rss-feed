@@ -80,7 +80,7 @@ func main() {
 	readArticlesUseCase := usecase.NewReadArticles(sqliteDatabase, s3Storage)
 	saveFeedUseCase := usecase.NewSaveFeed(feed.NewGoFeed(), sqliteDatabase, broker)
 	findArticlesUseCase := usecase.NewFind(chromaDatabase, sqliteDatabase)
-	handleFeedUseCase := usecase.NewHandleFeed(broker)
+	handleFeedUseCase := usecase.NewHandleFeed(broker, sqliteDatabase)
 	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, broker, s3Storage, sqliteDatabase)
 	handleArticleUseCase := usecase.NewArticle(broker, chromaDatabase)
 	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), broker)

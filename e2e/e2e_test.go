@@ -132,6 +132,8 @@ func TestEndToEnd(t *testing.T) {
 			Articles: []event.Article{
 				{
 					ArticleID:   "article-e2e",
+					FeedID:      "feed-e2e",
+					FeedName:    "E2E Blog",
 					Title:       "E2E Article",
 					URL:         "https://example.com/article-1",
 					PublishedAt: time.Now().UTC(),
@@ -146,7 +148,7 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	saveFeedUC := usecase.NewSaveFeed(fetcher, db, broker)
-	handleFeedUC := usecase.NewHandleFeed(broker)
+	handleFeedUC := usecase.NewHandleFeed(broker, db)
 	consumeImageUC := usecase.NewConsumeImage(http.DefaultClient, broker, &mockFileStorage{}, db)
 	readArticlesUC := usecase.NewReadArticles(db, &mockImageStorage{})
 

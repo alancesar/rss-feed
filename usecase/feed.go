@@ -4,19 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"rss-feed/pkg/event"
+	"rss-feed/pkg/rss"
 
 	"github.com/rs/zerolog"
 )
 
 type (
+	FeedArticleStore interface {
+		SaveArticle(ctx context.Context, article rss.Article) error
+	}
+
 	HandleFeed struct {
 		broker Broker
+		store  FeedArticleStore
 	}
 )
 
-func NewHandleFeed(broker Broker) *HandleFeed {
+func NewHandleFeed(broker Broker, store FeedArticleStore) *HandleFeed {
 	return &HandleFeed{
 		broker: broker,
+		store:  store,
 	}
 }
 
@@ -44,6 +51,12 @@ func (uc HandleFeed) Execute(ctx context.Context) error {
 
 		failed := false
 		for _, article := range e.Articles {
+			if err := uc.store.SaveArticle(ctx, article.ToDomain()); err != nil {
+				logger.Error().Err(err).Msg("failed to save article")
+				failed = true
+				break
+			}
+
 			logger.Info().Str("article_id", article.ArticleID).Msg("publishing article event")
 
 			if err := uc.broker.Publish(ctx, event.NewArticleFound(article)); err != nil {
