@@ -96,6 +96,10 @@ func (g Gorm) UpdateFeed(ctx context.Context, feed rss.Feed) error {
 }
 
 func (g Gorm) SaveArticle(ctx context.Context, article rss.Article) error {
+	if article.Feed.ID == "" {
+		return errors.New("article feed ID is required")
+	}
+
 	m := model.NewArticleFromDomain(article, article.Feed.ID)
 	return g.db.WithContext(ctx).Save(&m).Error
 }
