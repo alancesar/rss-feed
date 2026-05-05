@@ -56,12 +56,13 @@ func (uc HandleFeed) Execute(ctx context.Context) error {
 			if err := uc.store.SaveArticle(ctx, article.ToDomain()); err != nil {
 				logger.Error().Err(err).Msg("failed to save article")
 				failed = true
-				continue
+				break
 			}
 
 			if err := uc.broker.Publish(ctx, event.NewArticleFound(article)); err != nil {
 				logger.Error().Err(err).Msg("failed to publish article")
 				failed = true
+				break
 			}
 		}
 
