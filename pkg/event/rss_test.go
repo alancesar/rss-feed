@@ -12,6 +12,7 @@ func TestArticle_ToDomain(t *testing.T) {
 	a := event.Article{
 		ArticleID:   "article-1",
 		FeedID:      "feed-abc",
+		FeedName:    "Test Blog",
 		Title:       "First Post",
 		Description: "A short description",
 		Content:     "Full content here",
@@ -47,6 +48,12 @@ func TestArticle_ToDomain(t *testing.T) {
 	}
 	if !got.PublishedAt.Equal(publishedAt) {
 		t.Errorf("expected PublishedAt %v, got %v", publishedAt, got.PublishedAt)
+	}
+	if got.Feed.ID != a.FeedID {
+		t.Errorf("expected Feed.ID %q, got %q", a.FeedID, got.Feed.ID)
+	}
+	if got.Feed.Name != a.FeedName {
+		t.Errorf("expected Feed.Name %q, got %q", a.FeedName, got.Feed.Name)
 	}
 }
 
