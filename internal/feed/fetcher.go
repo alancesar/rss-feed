@@ -39,7 +39,7 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 	feedID := hash.Hash(feed.FeedLink)
 	articles := make([]event.Article, len(feed.Items))
 	for i, item := range feed.Items {
-		articleID := hash.Hash(item.GUID)
+		articleID := hash.Hash(item.Link)
 		article := event.Article{
 			ArticleID:   articleID,
 			FeedID:      feedID,
