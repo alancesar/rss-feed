@@ -11,65 +11,58 @@ import (
 
 type (
 	ArticleStore interface {
-		SaveArticle(context.Context, string, rss.Article) error
+		CreateArticle(ctx context.Context, article rss.Article) error
 	}
 
-	SaveArticles struct {
-		store  ArticleStore
-		broker Broker
+	Article struct {
+		subscriber Subscriber
+		store      ArticleStore
 	}
 )
 
-func NewSaveArticles(store ArticleStore, broker Broker) *SaveArticles {
-	return &SaveArticles{
-		store:  store,
-		broker: broker,
+func NewArticle(subscriber Subscriber, store ArticleStore) *Article {
+	return &Article{
+		subscriber: subscriber,
+		store:      store,
 	}
 }
 
-func (uc SaveArticles) Execute(ctx context.Context) error {
+func (uc *Article) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Msg("starting consume articles")
 
 	defer func() {
-		_ = uc.broker.Close()
+		_ = uc.subscriber.Close()
 		logger.Info().Msg("finished consume articles")
 	}()
 
-	deliveries, err := uc.broker.Subscribe(ctx, event.TopicFeedArticleFound)
+	deliveries, err := uc.subscriber.Subscribe(ctx, event.TopicFeedArticleFound)
 	if err != nil {
+		logger.Error().Err(err).Msg("failed to subscribe to articles")
 		return err
 	}
 
-	for delivery := range deliveries {
-		var e event.Feed
-		if err := json.Unmarshal(delivery.Payload, &e); err != nil {
-			logger.Error().Err(err).Msg("failed to unmarshal feed")
-			delivery.Nack(false)
-			continue
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info().Msg("stopping consume articles")
+			return ctx.Err()
+		case delivery := <-deliveries:
+			var e event.Article
+			if err := json.Unmarshal(delivery.Payload, &e); err != nil {
+				delivery.Nack(false)
+				continue
+			}
+
+			article := e.ToDomain()
+			logger.Info().Str("article_id", article.ID).Msg("saving article to vector database")
+			if err := uc.store.CreateArticle(ctx, article); err != nil {
+				logger.Error().Err(err).Msg("failed to store article")
+				delivery.Nack(true)
+				continue
+			}
+
+			delivery.Ack()
 		}
-
-		feed := e.ToDomain()
-
-		logger.Info().Str("feed", feed.Name).Int("articles", len(feed.Articles)).Msg("saving feed")
-		for _, article := range e.Articles {
-			if err := uc.store.SaveArticle(ctx, feed.ID, article.ToDomain()); err != nil {
-				logger.Error().Err(err).Msg("failed to save article")
-				continue
-			}
-
-			if article.Image.ImageID == "" {
-				continue
-			}
-
-			logger.Info().Str("article_id", article.ArticleID).Msg("publishing image event")
-			if err := uc.broker.Publish(ctx, event.NewImageFoundEvent(article.Image)); err != nil {
-				continue
-			}
-		}
-
-		delivery.Ack()
 	}
-
-	return nil
 }

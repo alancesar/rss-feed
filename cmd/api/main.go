@@ -12,20 +12,22 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"net"
 	"net/http"
 	"os"
 	"rss-feed/handler"
 	"rss-feed/internal/database"
 	"rss-feed/internal/feed"
+	"rss-feed/internal/ml"
 	"rss-feed/internal/queue"
 	"rss-feed/internal/storage"
+	"rss-feed/pkg/markdown"
 	"rss-feed/usecase"
 	"time"
 
 	_ "rss-feed/docs"
 
+	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -54,13 +56,33 @@ func main() {
 		log.Fatal().Err(err).Msg("creating s3 client")
 	}
 
+	client, err := chroma.NewHTTPClient(
+		chroma.WithBaseURL(os.Getenv("CHROMA_URL")),
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("creating chroma client")
+	}
+
+	defer func() { _ = client.Close() }()
+
+	collection, err := client.GetOrCreateCollection(ctx, "articles")
+	if err != nil {
+		log.Fatal().Err(err).Msg("getting or creating chroma collection")
+	}
+
+	chromaDatabase := database.NewChroma(collection, ml.NewOllamaClient(http.DefaultClient, ml.Properties{
+		Model: os.Getenv("OLLAMA_MODEL"),
+		URL:   os.Getenv("OLLAMA_URL"),
+	}), markdown.NewParser())
 	pubSub := queue.NewGoChannel()
 	broker := queue.NewWatermillBroker(pubSub)
 
 	readArticlesUseCase := usecase.NewReadArticles(sqliteDatabase, s3Storage)
 	saveFeedUseCase := usecase.NewSaveFeed(feed.NewGoFeed(), sqliteDatabase, broker)
-	saveArticlesUseCase := usecase.NewSaveArticles(sqliteDatabase, broker)
+	findArticlesUseCase := usecase.NewFind(chromaDatabase, sqliteDatabase)
+	handleFeedUseCase := usecase.NewHandleFeed(broker)
 	consumeImageUseCase := usecase.NewConsumeImage(http.DefaultClient, broker, s3Storage, sqliteDatabase)
+	handleArticleUseCase := usecase.NewArticle(broker, chromaDatabase)
 	updateFeedsUseCase := usecase.NewUpdateFeeds(sqliteDatabase, feed.NewGoFeed(), broker)
 
 	updateInterval := 30 * time.Minute
@@ -73,7 +95,7 @@ func main() {
 	}
 
 	go func() {
-		if err := saveArticlesUseCase.Execute(ctx); err != nil {
+		if err := handleFeedUseCase.Execute(ctx); err != nil {
 			log.Fatal().Err(err).Msg("consuming feed articles")
 		}
 	}()
@@ -85,12 +107,19 @@ func main() {
 	}()
 
 	go func() {
+		if err := handleArticleUseCase.Execute(ctx); err != nil {
+			log.Fatal().Err(err).Msg("handling feed articles")
+		}
+	}()
+
+	go func() {
 		if err := updateFeedsUseCase.Execute(ctx, updateInterval); err != nil {
 			log.Fatal().Err(err).Msg("updating feeds")
 		}
 	}()
 
 	r := chi.NewRouter()
+	r.Use(render.SetContentType(render.ContentTypeJSON))
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
@@ -106,19 +135,10 @@ func main() {
 		AllowedOrigins: []string{"http://localhost*"},
 	}))
 
-	render.Respond = func(w http.ResponseWriter, r *http.Request, v interface{}) {
-		w.Header().Set("Content-Type", "application/json")
-		if status, ok := r.Context().Value(render.StatusCtxKey).(int); ok {
-			w.WriteHeader(status)
-		}
-		enc := json.NewEncoder(w)
-		enc.SetEscapeHTML(false)
-		_ = enc.Encode(v)
-	}
-
 	r.Route("/articles", func(r chi.Router) {
 		r.Get("/", handler.GetFromDate(readArticlesUseCase))
 		r.Get("/today", handler.ListToday(readArticlesUseCase))
+		r.Get("/search", handler.FindArticles(findArticlesUseCase))
 	})
 
 	r.Route("/feeds", func(r chi.Router) {

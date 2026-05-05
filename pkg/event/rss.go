@@ -24,6 +24,9 @@ type (
 		ArticleID   string    `json:"article_id"`
 		FeedID      string    `json:"feed_id"`
 		Title       string    `json:"title"`
+		Description string    `json:"description"`
+		Content     string    `json:"content"`
+		Categories  []string  `json:"categories"`
 		URL         string    `json:"url"`
 		Image       Image     `json:"image"`
 		PublishedAt time.Time `json:"published_at"`
@@ -34,6 +37,9 @@ func (a Article) ToDomain() rss.Article {
 	return rss.Article{
 		ID:          a.ArticleID,
 		Title:       a.Title,
+		Description: a.Description,
+		Content:     a.Content,
+		Categories:  a.Categories,
 		URL:         a.URL,
 		PublishedAt: a.PublishedAt,
 	}

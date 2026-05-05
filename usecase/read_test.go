@@ -14,7 +14,6 @@ func TestReadArticles_Execute(t *testing.T) {
 
 	now := today()
 
-	createTestFeed(t, ctx, db)
 	saveTestArticle(t, ctx, db, now)
 	img := rss.NewImage("images/original/article-1.jpg", rss.OriginalImageType)
 	if err := db.SaveImage(ctx, "article-1", img); err != nil {
@@ -46,9 +45,7 @@ func TestReadArticles_Execute_NoImages(t *testing.T) {
 
 	now := today()
 
-	createTestFeed(t, ctx, db)
 	saveTestArticle(t, ctx, db, now)
-
 	uc := usecase.NewReadArticles(db, &mockImageStorage{})
 	articles, err := uc.Execute(ctx, now)
 	if err != nil {
@@ -68,25 +65,10 @@ func TestReadArticles_Execute_DateFiltering(t *testing.T) {
 
 	now := today()
 	yesterday := now.AddDate(0, 0, -1)
-
-	createTestFeed(t, ctx, db)
-	if err := db.SaveArticle(ctx, "feed-abc", rss.Article{
-		ID:          "article-today",
-		Title:       "Today Post",
-		URL:         "https://example.com/today",
-		PublishedAt: now,
-	}); err != nil {
-		t.Fatalf("saving article: %v", err)
-	}
-	if err := db.SaveArticle(ctx, "feed-abc", rss.Article{
-		ID:          "article-yesterday",
-		Title:       "Yesterday Post",
-		URL:         "https://example.com/yesterday",
-		PublishedAt: yesterday,
-	}); err != nil {
-		t.Fatalf("saving article: %v", err)
-	}
-
+	createTestFeed(t, ctx, db,
+		rss.Article{ID: "article-today", Title: "Today Post", URL: "https://example.com/today", PublishedAt: now},
+		rss.Article{ID: "article-yesterday", Title: "Yesterday Post", URL: "https://example.com/yesterday", PublishedAt: yesterday},
+	)
 	uc := usecase.NewReadArticles(db, &mockImageStorage{})
 	articles, err := uc.Execute(ctx, now)
 	if err != nil {

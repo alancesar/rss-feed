@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,23 +36,21 @@ func today() time.Time {
 	return time.Now().UTC().Truncate(time.Second)
 }
 
-func createTestFeed(t *testing.T, ctx context.Context, db *database.Gorm) {
+func createTestFeed(t *testing.T, ctx context.Context, db *database.Gorm, articles ...rss.Article) {
 	t.Helper()
-	if err := db.CreateFeed(ctx, rss.Feed{ID: "feed-abc", Name: "Test Blog", URL: "https://example.com/feed.xml"}); err != nil {
+	if err := db.CreateFeed(ctx, rss.Feed{ID: "feed-abc", Name: "Test Blog", URL: "https://example.com/feed.xml", Articles: articles}); err != nil {
 		t.Fatalf("creating feed: %v", err)
 	}
 }
 
 func saveTestArticle(t *testing.T, ctx context.Context, db *database.Gorm, publishedAt time.Time) {
 	t.Helper()
-	if err := db.SaveArticle(ctx, "feed-abc", rss.Article{
+	createTestFeed(t, ctx, db, rss.Article{
 		ID:          "article-1",
 		Title:       "First Post",
 		URL:         "https://example.com/post-1",
 		PublishedAt: publishedAt,
-	}); err != nil {
-		t.Fatalf("saving article: %v", err)
-	}
+	})
 }
 
 // — test pub/sub helpers —
@@ -127,4 +126,32 @@ func (m *mockStorage) Create(_ context.Context, _ string, _ io.Reader) error { r
 
 func (m *mockImageStorage) Presign(_ context.Context, path string, _ time.Duration) (string, error) {
 	return "https://cdn.example.com/" + path, nil
+}
+
+type (
+	mockArticleStore struct {
+		mu       sync.Mutex
+		articles []rss.Article
+	}
+
+	mockVectorSearch struct {
+		ids []string
+	}
+)
+
+func (m *mockArticleStore) CreateArticle(_ context.Context, article rss.Article) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.articles = append(m.articles, article)
+	return nil
+}
+
+func (m *mockArticleStore) stored() []rss.Article {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]rss.Article(nil), m.articles...)
+}
+
+func (m *mockVectorSearch) FindArticlesIDsByTerm(_ context.Context, _ string) ([]string, error) {
+	return m.ids, nil
 }

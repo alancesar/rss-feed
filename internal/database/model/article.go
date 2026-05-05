@@ -1,8 +1,11 @@
 package model
 
 import (
+	"encoding/json"
 	"rss-feed/pkg/rss"
 	"time"
+
+	"gorm.io/datatypes"
 )
 
 type (
@@ -20,6 +23,9 @@ type (
 		FeedID      string `gorm:"index"`
 		Feed        Feed   `gorm:"foreignKey:FeedID;references:ID"`
 		Title       string
+		Description string
+		Content     string
+		Categories  datatypes.JSON
 		URL         string  `gorm:"uniqueIndex"`
 		Images      []Image `gorm:"foreignKey:ArticleID;references:ID"`
 		CreatedAt   time.Time
@@ -51,11 +57,17 @@ func NewFeedFromDomain(feed rss.Feed) Feed {
 }
 
 func NewArticleFromDomain(article rss.Article, feedID string) Article {
+	categories, _ := json.Marshal(article.Categories)
+
 	return Article{
 		ID:          article.ID,
 		FeedID:      feedID,
 		Title:       article.Title,
+		Description: article.Description,
+		Content:     article.Content,
+		Categories:  categories,
 		URL:         article.URL,
+		CreatedAt:   time.Time{},
 		PublishedAt: article.PublishedAt,
 	}
 }
@@ -84,12 +96,18 @@ func (a Article) ToDomain() rss.Article {
 		images[i] = img.ToDomain()
 	}
 
+	var categories []string
+	_ = json.Unmarshal(a.Categories, &categories)
+
 	return rss.Article{
 		ID:          a.ID,
 		Title:       a.Title,
+		Description: a.Description,
+		Content:     a.Content,
+		Categories:  categories,
 		URL:         a.URL,
-		Images:      images,
 		Feed:        a.Feed.ToDomain(),
+		Images:      images,
 		PublishedAt: a.PublishedAt,
 	}
 }

@@ -25,16 +25,16 @@ func NewUpdateFeedCommand() Message {
 	}
 }
 
-func NewImageFoundEvent(image Image) Message {
+func NewArticleFound(article Article) Message {
 	return Message{
-		Topic:   TopicFeedArticleImageFound,
-		Payload: NewPayload(image),
+		Topic:   TopicFeedArticleFound,
+		Payload: NewPayload(article),
 	}
 }
 
-func NewArticleFoundEvent(feed Feed) Message {
+func NewFeedFoundEvent(feed Feed) Message {
 	return Message{
-		Topic:   TopicFeedArticleFound,
+		Topic:   TopicFeedFound,
 		Payload: NewPayload(feed),
 	}
 }

@@ -1,12 +1,12 @@
 package rss
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"html"
+	"rss-feed/pkg/hash"
 	"time"
+
+	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
 )
 
 var (
@@ -38,6 +38,9 @@ type (
 	Article struct {
 		ID          string
 		Title       string
+		Description string
+		Content     string
+		Categories  []string
 		URL         string
 		Feed        Feed
 		Images      []Image
@@ -51,17 +54,27 @@ func (f *Feed) Touch() {
 
 func NewImage(path string, imgType ImageType) Image {
 	return Image{
-		ID:   hashFromString(path),
+		ID:   hash.Hash(path),
 		Path: path,
 		Type: imgType,
 	}
 }
 
 func (a Article) ToMarkdown() string {
-	return fmt.Sprintf(`[%s](%s)`, html.UnescapeString(a.Title), a.URL)
-}
+	description, err := htmltomarkdown.ConvertString(a.Description)
+	if err != nil {
+		description = a.Description
+	}
 
-func hashFromString(input string) string {
-	hash := sha256.Sum256([]byte(input))
-	return hex.EncodeToString(hash[:])
+	content, err := htmltomarkdown.ConvertString(a.Content)
+	if err != nil {
+		content = a.Content
+	}
+
+	body := description
+	if content != "" {
+		body = body + "\n\n---\n\n" + content
+	}
+
+	return fmt.Sprintf("# %s\n\n%s", a.Title, body)
 }

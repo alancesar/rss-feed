@@ -33,28 +33,43 @@ func TestNewImage_IDDerivedFromPath(t *testing.T) {
 	}
 }
 
-func TestArticle_ToMarkdown(t *testing.T) {
+func TestArticle_ToMarkdown_DescriptionOnly(t *testing.T) {
 	article := rss.Article{
-		Title: "Hello World",
-		URL:   "https://example.com/post-1",
+		Title:       "Hello World",
+		Description: "A short summary.",
 	}
 
 	got := article.ToMarkdown()
-	want := "[Hello World](https://example.com/post-1)"
+	want := "# Hello World\n\nA short summary."
 
 	if got != want {
 		t.Errorf("expected %q, got %q", want, got)
 	}
 }
 
-func TestArticle_ToMarkdown_UnescapesHTMLEntities(t *testing.T) {
+func TestArticle_ToMarkdown_DescriptionAndContent(t *testing.T) {
 	article := rss.Article{
-		Title: "Rust &amp; Go: A Comparison",
-		URL:   "https://example.com/post-1",
+		Title:       "Hello World",
+		Description: "A short summary.",
+		Content:     "Full article content.",
 	}
 
 	got := article.ToMarkdown()
-	want := "[Rust & Go: A Comparison](https://example.com/post-1)"
+	want := "# Hello World\n\nA short summary.\n\n---\n\nFull article content."
+
+	if got != want {
+		t.Errorf("expected %q, got %q", want, got)
+	}
+}
+
+func TestArticle_ToMarkdown_ConvertsHTMLEntities(t *testing.T) {
+	article := rss.Article{
+		Title:       "Rust &amp; Go: A Comparison",
+		Description: "A comparison article.",
+	}
+
+	got := article.ToMarkdown()
+	want := "# Rust &amp; Go: A Comparison\n\nA comparison article."
 
 	if got != want {
 		t.Errorf("expected %q, got %q", want, got)

@@ -18,7 +18,6 @@ func TestConsumeImage_Execute(t *testing.T) {
 	db := newTestDB(t)
 	now := today()
 
-	createTestFeed(t, ctx, db)
 	saveTestArticle(t, ctx, db, now)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -27,13 +26,16 @@ func TestConsumeImage_Execute(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	imgEvent := event.Image{
-		ImageID:   "img-1",
+	articleEvent := event.Article{
 		ArticleID: "article-1",
-		URL:       srv.URL + "/image.jpg",
+		Image: event.Image{
+			ImageID:   "img-1",
+			ArticleID: "article-1",
+			URL:       srv.URL + "/image.jpg",
+		},
 	}
 
-	subscriber := newTestBroker(t, event.TopicFeedArticleImageFound, imgEvent)
+	subscriber := newTestBroker(t, event.TopicFeedArticleFound, articleEvent)
 	uc := usecase.NewConsumeImage(http.DefaultClient, subscriber, &mockStorage{}, db)
 	go func() { _ = uc.Execute(ctx) }()
 
