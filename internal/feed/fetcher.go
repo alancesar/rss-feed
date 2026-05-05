@@ -43,6 +43,7 @@ func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 		article := event.Article{
 			ArticleID:   articleID,
 			FeedID:      feedID,
+			FeedName:    feed.Title,
 			Title:       item.Title,
 			Description: item.Description,
 			Content:     item.Content,
