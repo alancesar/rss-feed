@@ -42,15 +42,21 @@ func (uc HandleFeed) Execute(ctx context.Context) error {
 			continue
 		}
 
+		failed := false
 		for _, article := range e.Articles {
 			logger.Info().Str("article_id", article.ArticleID).Msg("publishing article event")
 
 			if err := uc.broker.Publish(ctx, event.NewArticleFound(article)); err != nil {
 				logger.Error().Err(err).Msg("failed to publish article")
+				failed = true
 			}
 		}
 
-		delivery.Ack()
+		if failed {
+			delivery.Nack(true)
+		} else {
+			delivery.Ack()
+		}
 	}
 
 	return nil
