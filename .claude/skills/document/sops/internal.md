@@ -11,6 +11,16 @@ These packages are adapters: they are where concrete technologies live. This SOP
    - Satisfying a port is fine to state generically ("implements the article search port" is borderline; prefer describing behavior: "finds article IDs by semantic similarity").
 3. Comment-only changes; never touch `*_test.go`.
 
+## Special case: `internal/handler/`
+
+Handler doc comments are **generated API documentation**: the `// Name godoc` blocks carry `swag` annotations (`@Summary`, `@Param`, `@Success`, `@Router`, ...) that produce the Swagger docs (`make docs`).
+
+- Keep the existing `// Name godoc` + annotation block format exactly; never reword, reorder, or delete annotation lines unless the endpoint's behavior changed.
+- Document a handler by completing its annotations (`@Summary`, `@Description`, `@Tags`, `@Accept`, `@Produce`, `@Param`, `@Success`, `@Failure`, `@Router`) so they match the code's real status codes and request/response types.
+- Annotations describe the HTTP contract, so route paths and methods belong here; the "no caller references" rule still applies to everything else (no mention of use cases or `cmd/api`).
+- Plain Go comments (constructor, types) follow the normal rules below.
+- Verify with `make docs` (requires `swag`) that generation still succeeds.
+
 ## What to document
 
 - **Package comment** (`// Package x ...`): one per package, on one file only (the main file).
