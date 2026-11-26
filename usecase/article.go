@@ -47,9 +47,15 @@ func (uc *Article) Execute(ctx context.Context) error {
 		case <-ctx.Done():
 			logger.Info().Msg("stopping consume articles")
 			return ctx.Err()
-		case delivery := <-deliveries:
+		case delivery, ok := <-deliveries:
+			if !ok {
+				logger.Info().Msg("articles subscription closed")
+				return nil
+			}
+
 			var e event.Article
 			if err := json.Unmarshal(delivery.Payload, &e); err != nil {
+				logger.Error().Err(err).Msg("failed to unmarshal article")
 				delivery.Nack(false)
 				continue
 			}
