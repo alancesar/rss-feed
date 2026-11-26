@@ -34,8 +34,9 @@ func NewHandleFeed(broker Broker, store FeedArticleStore) *HandleFeed {
 
 // Execute consumes "feed found" events. For each article in the feed it persists the
 // article and then publishes an "article found" event. On the first failure the whole
-// feed message is rejected for redelivery; messages that cannot be decoded are rejected
-// without redelivery. It runs until the subscription is closed and closes the broker on exit.
+// feed message is rejected with a request to redeliver it; messages that cannot be decoded are
+// rejected with a request not to redeliver them. Whether the broker honours that request is up
+// to the broker. It runs until the subscription is closed and closes the broker on exit.
 func (uc HandleFeed) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Msg("starting consume feed")

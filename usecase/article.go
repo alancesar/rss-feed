@@ -32,8 +32,9 @@ func NewArticle(subscriber Subscriber, store ArticleStore) *Article {
 }
 
 // Execute consumes "article found" events and indexes each article for semantic search.
-// Messages that cannot be decoded are rejected without redelivery; indexing failures
-// are rejected for redelivery. It blocks until ctx is cancelled (returning ctx.Err())
+// Messages that cannot be decoded are rejected with a request not to redeliver them, and
+// indexing failures are rejected with a request to redeliver them; whether the broker honours
+// that request is up to the broker. It blocks until ctx is cancelled (returning ctx.Err())
 // or the subscription is closed (returning nil), and closes the subscriber on exit.
 func (uc *Article) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)

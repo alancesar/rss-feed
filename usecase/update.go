@@ -88,9 +88,10 @@ func (uc UpdateFeeds) Execute(ctx context.Context, updateInterval time.Duration)
 	}
 }
 
-// updateFeeds fetches every registered feed. Feeds that fail to fetch, or that have not changed
-// since they were last checked, are skipped. Changed feeds are announced with a "feed found"
-// event and then marked as checked. A publish or persistence failure aborts the run.
+// updateFeeds fetches every registered feed. Feeds that fail to fetch are skipped, and so are
+// feeds that report an update time older than the one stored. Feeds that report no update time
+// are never skipped. The others are announced with a "feed found" event and then marked as
+// checked. A publish or persistence failure aborts the run.
 func (uc UpdateFeeds) updateFeeds(ctx context.Context) error {
 	feeds, err := uc.store.GetAllFeeds(ctx)
 	if err != nil {

@@ -49,8 +49,9 @@ func NewConsumeImage(client *http.Client, subscriber Subscriber, storage FileSto
 }
 
 // Execute consumes "article found" events. Articles without an image are acknowledged and
-// skipped; download, storage or persistence failures are rejected for redelivery, and messages
-// that cannot be decoded are rejected without redelivery. It runs until the subscription is
+// skipped; download, storage or persistence failures are rejected with a request to redeliver,
+// and messages that cannot be decoded are rejected with a request not to redeliver. Whether the
+// broker honours that request is up to the broker. It runs until the subscription is
 // closed and closes the subscriber on exit.
 func (uc ConsumeImage) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
