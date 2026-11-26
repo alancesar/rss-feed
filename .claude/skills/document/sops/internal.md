@@ -1,6 +1,6 @@
 # SOP: documenting the `internal/` packages
 
-Applies to every non-test `.go` file under `internal/` (`database`, `database/model`, `feed`, `ml`, `queue`, `storage`). Loaded by the `document` skill.
+Applies to every non-test `.go` file under `internal/` (`database`, `database/model`, `feed`, `handler`, `ml`, `presenter`, `queue`, `storage`). Loaded by the `document` skill.
 
 These packages are adapters: they are where concrete technologies live. This SOP **overrides** the "never name the technology" common rule.
 

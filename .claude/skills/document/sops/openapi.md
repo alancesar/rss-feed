@@ -5,7 +5,7 @@ Applies to the HTTP contract, which is generated with `swag` from Go comments (`
 | Where | What it produces |
 |---|---|
 | `internal/handler/*.go` | one `// Name godoc` annotation block per handler → one operation |
-| `presenter/*.go` | struct field tags and trailing comments → request/response schemas |
+| `internal/presenter/*.go` | struct field tags and trailing comments → request/response schemas |
 | `cmd/api/main.go` | the API-level block (`@title`, `@version`, `@description`, `@host`, `@BasePath`) |
 
 Loaded by the `document` skill. Plain Go doc rules for the same files are in `internal.md`; this SOP governs the annotations. These comments are **generated output**: they must match the code exactly, and the format below is the project standard (derived from the existing handlers).
