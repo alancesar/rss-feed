@@ -13,7 +13,7 @@ pkg/hash/          → Hash helper used to derive IDs from URLs
 pkg/markdown/      → HTML → Markdown parser (used to build the text that gets embedded)
 usecase/           → Business logic with interface definitions
 internal/handler  → HTTP request handlers (chi router)
-presenter/         → Request/response DTOs
+internal/presenter → Request/response DTOs
 internal/database  → GORM + SQLite persistence (gorm.go) and Chroma vector store (chroma.go)
 internal/feed      → RSS feed fetcher (gofeed) — emits event.Feed
 internal/ml        → Ollama embedding client
@@ -199,7 +199,7 @@ Structs that are populated from a domain entity (types living in `pkg/`) must be
 func NewFeedResponse(feed rss.Feed) FeedResponse { ... }
 response := presenter.NewFeedResponse(feed)
 
-// incorrect — do not fill presenter/model structs inline
+// incorrect — do not fill internal/presenter or model structs inline
 response := presenter.FeedResponse{ID: feed.ID, Name: feed.Name, URL: feed.URL}
 ```
 
@@ -210,4 +210,4 @@ func (f Feed) ToDomain() rss.Feed { ... }
 domain := model.ToDomain()
 ```
 
-This applies to all layers that bridge to the domain: `presenter/`, `internal/database/model/`, and `pkg/event/`.
+This applies to all layers that bridge to the domain: `internal/presenter/`, `internal/database/model/`, and `pkg/event/`.

@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"rss-feed/internal/presenter"
 	"rss-feed/pkg/rss"
-	"rss-feed/presenter"
 )
 
 func TestNewImageResponseFromDomain(t *testing.T) {

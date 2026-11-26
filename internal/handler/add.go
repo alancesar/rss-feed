@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"rss-feed/internal/presenter"
 	"rss-feed/pkg/rss"
-	"rss-feed/presenter"
 	"rss-feed/usecase"
 
 	"github.com/go-chi/render"

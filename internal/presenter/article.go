@@ -7,6 +7,7 @@ import (
 )
 
 type (
+	// ArticleResponse is the JSON representation of an article, with its feed and images.
 	ArticleResponse struct {
 		Title       string          `json:"title"`
 		URL         string          `json:"url"`
@@ -15,16 +16,20 @@ type (
 		PublishedAt time.Time       `json:"published_at" example:"2006-01-02T15:04:05-07:00" format:"date-time"` // RFC3339 timestamp with timezone offset
 	}
 
+	// ImageResponse is the JSON representation of an article image: its location and type.
 	ImageResponse struct {
 		URL  string `json:"url"`
 		Type string `json:"type"`
 	}
 
+	// ArticleListResponse is the JSON envelope for a list of articles.
 	ArticleListResponse struct {
 		Articles []ArticleResponse `json:"articles"`
 	}
 )
 
+// NewArticleListResponse converts domain articles into an ArticleListResponse, keeping their order.
+// The list is empty, never nil, when there are no articles.
 func NewArticleListResponse(articles []rss.Article) *ArticleListResponse {
 	output := make([]ArticleResponse, len(articles))
 	for i, article := range articles {
@@ -36,6 +41,8 @@ func NewArticleListResponse(articles []rss.Article) *ArticleListResponse {
 	}
 }
 
+// NewImageResponseFromDomain converts a domain image into an ImageResponse, exposing the
+// image path as its URL.
 func NewImageResponseFromDomain(image rss.Image) ImageResponse {
 	return ImageResponse{
 		URL:  image.Path,
@@ -43,10 +50,13 @@ func NewImageResponseFromDomain(image rss.Image) ImageResponse {
 	}
 }
 
+// Render implements the go-chi render.Renderer interface. It performs no post-processing.
 func (a ArticleListResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
 }
 
+// NewArticleResponseFromDomain converts a domain article into an ArticleResponse, including
+// its feed and images.
 func NewArticleResponseFromDomain(article rss.Article) ArticleResponse {
 	images := make([]ImageResponse, len(article.Images))
 	for i, img := range article.Images {

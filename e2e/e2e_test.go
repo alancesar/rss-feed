@@ -14,8 +14,8 @@ import (
 
 	"rss-feed/internal/database"
 	"rss-feed/internal/handler"
+	"rss-feed/internal/presenter"
 	"rss-feed/pkg/event"
-	"rss-feed/presenter"
 	"rss-feed/usecase"
 
 	"github.com/go-chi/chi/v5"
