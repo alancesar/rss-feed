@@ -12,7 +12,7 @@ pkg/event/         → Event types, topics and jobs for async messaging (Feed, A
 pkg/hash/          → Hash helper used to derive IDs from URLs
 pkg/markdown/      → HTML → Markdown parser (used to build the text that gets embedded)
 usecase/           → Business logic with interface definitions
-handler/           → HTTP request handlers (chi router)
+internal/handler  → HTTP request handlers (chi router)
 presenter/         → Request/response DTOs
 internal/database  → GORM + SQLite persistence (gorm.go) and Chroma vector store (chroma.go)
 internal/feed      → RSS feed fetcher (gofeed) — emits event.Feed

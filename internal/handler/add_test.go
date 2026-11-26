@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"rss-feed/handler"
+	"rss-feed/internal/handler"
 	"rss-feed/pkg/event"
 	"rss-feed/presenter"
 	"rss-feed/usecase"
