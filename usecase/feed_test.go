@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"rss-feed/pkg/event"
+	"rss-feed/pkg/rss"
 	"rss-feed/usecase"
 )
 
@@ -15,7 +16,13 @@ type (
 	failingPublisherBroker struct {
 		deliveries chan event.Delivery
 	}
+
+	noopArticleStore struct{}
 )
+
+func (s *noopArticleStore) SaveArticle(_ context.Context, _ rss.Article) error {
+	return nil
+}
 
 func (b *failingPublisherBroker) Publish(_ context.Context, _ event.Message) error {
 	return errors.New("publish failed")
@@ -62,7 +69,7 @@ func TestConsumeFeed_Execute(t *testing.T) {
 		t.Fatalf("subscribing to article topic: %v", err)
 	}
 
-	uc := usecase.NewHandleFeed(broker)
+	uc := usecase.NewHandleFeed(broker, &noopArticleStore{})
 	go func() { _ = uc.Execute(ctx) }()
 
 	for {
@@ -118,7 +125,7 @@ func TestConsumeFeed_Execute_PublishFailure(t *testing.T) {
 		Nack: func(requeue bool) { nacked <- requeue },
 	}
 
-	uc := usecase.NewHandleFeed(&failingPublisherBroker{deliveries: deliveryCh})
+	uc := usecase.NewHandleFeed(&failingPublisherBroker{deliveries: deliveryCh}, &noopArticleStore{})
 	go func() { _ = uc.Execute(ctx) }()
 
 	select {
