@@ -18,7 +18,45 @@ type (
 	}
 
 	noopArticleStore struct{}
+
+	failingArticleStore struct{}
+
+	recordingPublisherBroker struct {
+		deliveries chan event.Delivery
+		published  chan event.Message
+	}
 )
+
+func (s *failingArticleStore) SaveArticle(_ context.Context, _ rss.Article) error {
+	return errors.New("save failed")
+}
+
+func (b *recordingPublisherBroker) Publish(_ context.Context, m event.Message) error {
+	b.published <- m
+	return nil
+}
+
+func (b *recordingPublisherBroker) Subscribe(_ context.Context, _ event.Topic) (<-chan event.Delivery, error) {
+	return b.deliveries, nil
+}
+
+func (b *recordingPublisherBroker) Close() error {
+	return nil
+}
+
+// newRecordedDelivery returns a channel holding one delivery with the given payload, plus
+// channels that receive its Ack and Nack(requeue) calls.
+func newRecordedDelivery(payload event.Payload) (chan event.Delivery, chan struct{}, chan bool) {
+	acked := make(chan struct{}, 1)
+	nacked := make(chan bool, 1)
+	ch := make(chan event.Delivery, 1)
+	ch <- event.Delivery{
+		Message: event.Message{Topic: event.TopicFeedFound, Payload: payload},
+		Ack:     func() { acked <- struct{}{} },
+		Nack:    func(requeue bool) { nacked <- requeue },
+	}
+	return ch, acked, nacked
+}
 
 func (s *noopArticleStore) SaveArticle(_ context.Context, _ rss.Article) error {
 	return nil
@@ -137,5 +175,82 @@ func TestConsumeFeed_Execute_PublishFailure(t *testing.T) {
 		t.Error("expected Nack but got Ack")
 	case <-ctx.Done():
 		t.Fatal("timed out waiting for Ack/Nack")
+	}
+}
+
+func TestConsumeFeed_Execute_Ack(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	feedEvent := event.Feed{
+		FeedID:   "feed-abc",
+		Articles: []event.Article{{ArticleID: "article-1", URL: "https://example.com/post-1", PublishedAt: today()}},
+	}
+	deliveries, acked, nacked := newRecordedDelivery(event.NewPayload(feedEvent))
+	broker := &recordingPublisherBroker{deliveries: deliveries, published: make(chan event.Message, 1)}
+
+	uc := usecase.NewHandleFeed(broker, &noopArticleStore{})
+	go func() { _ = uc.Execute(ctx) }()
+
+	select {
+	case <-acked:
+	case requeue := <-nacked:
+		t.Errorf("expected Ack, got Nack(%v)", requeue)
+	case <-ctx.Done():
+		t.Fatal("timed out waiting for Ack/Nack")
+	}
+}
+
+func TestConsumeFeed_Execute_MalformedPayload(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	deliveries, acked, nacked := newRecordedDelivery(event.Payload("not json"))
+	broker := &recordingPublisherBroker{deliveries: deliveries, published: make(chan event.Message, 1)}
+
+	uc := usecase.NewHandleFeed(broker, &noopArticleStore{})
+	go func() { _ = uc.Execute(ctx) }()
+
+	select {
+	case requeue := <-nacked:
+		if requeue {
+			t.Error("expected Nack(false), got Nack(true)")
+		}
+	case <-acked:
+		t.Error("expected Nack but got Ack")
+	case <-ctx.Done():
+		t.Fatal("timed out waiting for Ack/Nack")
+	}
+}
+
+func TestConsumeFeed_Execute_SaveFailure(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	feedEvent := event.Feed{
+		FeedID:   "feed-abc",
+		Articles: []event.Article{{ArticleID: "article-1", URL: "https://example.com/post-1", PublishedAt: today()}},
+	}
+	deliveries, acked, nacked := newRecordedDelivery(event.NewPayload(feedEvent))
+	broker := &recordingPublisherBroker{deliveries: deliveries, published: make(chan event.Message, 1)}
+
+	uc := usecase.NewHandleFeed(broker, &failingArticleStore{})
+	go func() { _ = uc.Execute(ctx) }()
+
+	select {
+	case requeue := <-nacked:
+		if !requeue {
+			t.Error("expected Nack(true), got Nack(false)")
+		}
+	case <-acked:
+		t.Error("expected Nack but got Ack")
+	case <-ctx.Done():
+		t.Fatal("timed out waiting for Ack/Nack")
+	}
+
+	select {
+	case m := <-broker.published:
+		t.Errorf("expected no publish, got message on %q", m.Topic)
+	default:
 	}
 }
