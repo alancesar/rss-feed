@@ -1,6 +1,7 @@
 # RSS Feed
 
-Aggregates articles from RSS feeds, stores them in SQLite, and serves them through a REST API. Article images are downloaded asynchronously and re-hosted from S3-compatible object storage.
+Aggregates articles from RSS feeds, stores them in SQLite, and serves them through a REST API. Article images are
+downloaded asynchronously and re-hosted from S3-compatible object storage.
 
 ## Requirements
 
@@ -22,7 +23,7 @@ All configuration is done via environment variables. Copy `.env.example` to `.en
 | `PORT`            | HTTP port for the API server   | `8080` (default)                         |
 | `UPDATE_INTERVAL` | Feed refresh interval (worker) | `30m` (default), accepts any Go duration |
 | `CHROMA_URL`      | Chroma vector store base URL   | `https://chroma.example.com`             |
-| `OLLAMA_URL`      | Ollama embedding API endpoint  | `http://localhost:11434/api/embed`        |
+| `OLLAMA_URL`      | Ollama embedding API endpoint  | `http://localhost:11434/api/embed`       |
 | `OLLAMA_MODEL`    | Ollama embedding model name    | `nomic-embed-text`                       |
 
 ## Running
@@ -30,16 +31,19 @@ All configuration is done via environment variables. Copy `.env.example` to `.en
 The project has two binaries. You'll typically want both running at the same time.
 
 **API server** — serves the REST API:
+
 ```bash
 make start
 ```
 
 **Worker** — processes RabbitMQ events and periodically re-fetches all registered feeds:
+
 ```bash
 make worker
 ```
 
 To build all binaries to `./bin/`:
+
 ```bash
 make build
 ```
@@ -56,6 +60,7 @@ Content-Type: application/json
 ```
 
 Response `201 Created`:
+
 ```json
 {
   "id": "abc123",
@@ -64,7 +69,8 @@ Response `201 Created`:
 }
 ```
 
-Adding a feed registers it and immediately triggers an async fetch. Articles will appear once the worker processes the event.
+Adding a feed registers it and immediately triggers an async fetch. Articles will appear once the worker processes the
+event.
 
 ### List articles
 
@@ -74,6 +80,7 @@ GET /articles/today
 ```
 
 Response `200 OK`:
+
 ```json
 {
   "articles": [
@@ -105,11 +112,13 @@ The `date` parameter must follow the `YYYY-MM-DD` format. `published_at` is an R
 POST /feeds/update
 ```
 
-Publishes a job event to the `rss.feed.jobs` queue. The worker picks it up and immediately re-fetches all registered feeds, the same as the periodic ticker but on demand.
+Publishes a job event to the `rss.feed.jobs` queue. The worker picks it up and immediately re-fetches all registered
+feeds, the same as the periodic ticker but on demand.
 
 ### Swagger UI
 
-Interactive docs available at `/swagger/index.html` once the server is running. To regenerate after changing annotations:
+Interactive docs available at `/swagger/index.html` once the server is running. To regenerate after changing
+annotations:
 
 ```bash
 make docs
@@ -117,16 +126,20 @@ make docs
 
 ## How it works
 
-When a feed is added, the API publishes an event to RabbitMQ. The worker picks it up, saves the articles to SQLite, and publishes a separate event for each article image. A second worker consumer downloads the image, uploads it to S3, and records its path in the database. Image URLs in API responses are presigned S3 URLs (1h TTL) generated at read time.
+When a feed is added, the API publishes an event to RabbitMQ. The worker picks it up, saves the articles to SQLite, and
+publishes a separate event for each article image. A second worker consumer downloads the image, uploads it to S3, and
+records its path in the database. Image URLs in API responses are presigned S3 URLs (1h TTL) generated at read time.
 
-The worker also runs a background ticker (default every 30 minutes, overridable via `UPDATE_INTERVAL`) that re-triggers this pipeline for every feed already in the database. `POST /feeds/update` triggers the same re-fetch immediately without waiting for the next tick.
+The worker also runs a background ticker (default every 30 minutes, overridable via `UPDATE_INTERVAL`) that re-triggers
+this pipeline for every feed already in the database. `POST /feeds/update` triggers the same re-fetch immediately
+without waiting for the next tick.
 
 ## RabbitMQ setup
 
 The service expects a topic exchange named `rss` with three queues bound to it:
 
-| Queue                            | Routing key                    |
-|----------------------------------|--------------------------------|
-| `rss.feed.article.found`         | `feed.article.found`           |
-| `rss.feed.article.image.found`   | `feed.article.image.found`     |
-| `rss.feed.jobs`                  | `feed.jobs`                    |
+| Queue                          | Routing key                |
+|--------------------------------|----------------------------|
+| `rss.feed.article.found`       | `feed.article.found`       |
+| `rss.feed.article.image.found` | `feed.article.image.found` |
+| `rss.feed.jobs`                | `feed.jobs`                |
