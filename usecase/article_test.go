@@ -68,3 +68,36 @@ func TestArticle_Execute_SkipsInvalidPayload(t *testing.T) {
 		t.Errorf("expected article ID %q, got %q", "article-2", articles[0].ID)
 	}
 }
+
+type (
+	closedSubscriber struct{}
+)
+
+func (closedSubscriber) Subscribe(_ context.Context, _ event.Topic) (<-chan event.Delivery, error) {
+	ch := make(chan event.Delivery)
+	close(ch)
+	return ch, nil
+}
+
+func (closedSubscriber) Close() error { return nil }
+
+func TestArticle_Execute_ReturnsWhenSubscriptionCloses(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	uc := usecase.NewArticle(closedSubscriber{}, &mockArticleStore{})
+
+	done := make(chan error, 1)
+	go func() {
+		done <- uc.Execute(ctx)
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+	case <-ctx.Done():
+		t.Fatal("Execute did not return after the subscription channel closed")
+	}
+}
