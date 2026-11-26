@@ -1,3 +1,4 @@
+// Package feed provides clients that read RSS and Atom feeds.
 package feed
 
 import (
@@ -11,21 +12,28 @@ import (
 )
 
 var (
+	// ErrEmptyFeed is returned when a feed is parsed successfully but contains no items.
 	ErrEmptyFeed = errors.New("feed is empty")
 )
 
 type (
+	// GoFeed reads feeds with the gofeed parser, which handles RSS, Atom and JSON feeds.
 	GoFeed struct {
 		parser *gofeed.Parser
 	}
 )
 
+// NewGoFeed creates a GoFeed with a default gofeed parser.
 func NewGoFeed() *GoFeed {
 	return &GoFeed{
 		parser: gofeed.NewParser(),
 	}
 }
 
+// Fetch downloads and parses the feed at url and converts it into an event.Feed. Feed and
+// article IDs are hashes of the feed link and of each item link; an article's image ID is a
+// hash of the article ID and the image URL, and is only set when the item has an image.
+// It fails with ErrEmptyFeed when the feed has no items.
 func (r GoFeed) Fetch(ctx context.Context, url string) (event.Feed, error) {
 	feed, err := r.parser.ParseURLWithContext(url, ctx)
 	if err != nil {
