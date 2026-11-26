@@ -2,7 +2,7 @@ package handler
 
 import (
 	"net/http"
-	"rss-feed/presenter"
+	"rss-feed/internal/presenter"
 	"rss-feed/usecase"
 
 	"github.com/go-chi/render"

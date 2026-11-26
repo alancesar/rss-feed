@@ -9,7 +9,7 @@ import (
 // TriggerFeedUpdate godoc
 //
 //	@Summary		Trigger a feed update
-//	@Description	Publishes a job event that instructs the worker to re-fetch all registered feeds immediately
+//	@Description	Requests an immediate re-fetch of all registered feeds and returns without waiting for it to finish
 //	@Tags			feeds
 //	@Success		202
 //	@Failure		500	{string}	string	"internal server error"

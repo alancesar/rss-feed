@@ -10,16 +10,21 @@ import (
 )
 
 type (
+	// FeedArticleStore persists articles.
 	FeedArticleStore interface {
+		// SaveArticle persists the article.
 		SaveArticle(ctx context.Context, article rss.Article) error
 	}
 
+	// HandleFeed is a consumer that persists the articles of every discovered feed
+	// and announces each one so further processing can happen independently.
 	HandleFeed struct {
 		broker Broker
 		store  FeedArticleStore
 	}
 )
 
+// NewHandleFeed creates a HandleFeed use case that consumes and publishes through broker and persists into store.
 func NewHandleFeed(broker Broker, store FeedArticleStore) *HandleFeed {
 	return &HandleFeed{
 		broker: broker,
@@ -27,6 +32,11 @@ func NewHandleFeed(broker Broker, store FeedArticleStore) *HandleFeed {
 	}
 }
 
+// Execute consumes "feed found" events. For each article in the feed it persists the
+// article and then publishes an "article found" event. On the first failure the whole
+// feed message is rejected with a request to redeliver it; messages that cannot be decoded are
+// rejected with a request not to redeliver them. Whether the broker honours that request is up
+// to the broker. It runs until the subscription is closed and closes the broker on exit.
 func (uc HandleFeed) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Msg("starting consume feed")

@@ -7,20 +7,20 @@ A Go service that fetches, stores, and serves news articles from RSS feeds. Uses
 Clean/Hexagonal Architecture with clear layer separation:
 
 ```
-pkg/rss/           → Domain models (Feed, Article, Image, ImageType) — no external deps
-pkg/event/         → Event types, topics and jobs for async messaging (Feed, Article, Job)
-pkg/hash/          → Hash helper used to derive IDs from URLs
-pkg/markdown/      → HTML → Markdown parser (used to build the text that gets embedded)
-usecase/           → Business logic with interface definitions
-handler/           → HTTP request handlers (chi router)
-presenter/         → Request/response DTOs
-internal/database  → GORM + SQLite persistence (gorm.go) and Chroma vector store (chroma.go)
-internal/feed      → RSS feed fetcher (gofeed) — emits event.Feed
-internal/ml        → Ollama embedding client
-internal/queue     → Watermill in-memory broker (watermill.go, used in production) and RabbitMQ client (rabbitmq.go, currently not wired)
-internal/storage   → S3-compatible object storage (upload + presign)
-cmd/api/           → Single binary: REST API server plus every background consumer, run as goroutines
-e2e/               → End-to-end tests over the HTTP router with an in-memory broker
+pkg/rss/            → Domain models (Feed, Article, Image, ImageType) — no external deps
+pkg/event/          → Event types, topics and jobs for async messaging (Feed, Article, Job)
+pkg/hash/           → Hash helper used to derive IDs from URLs
+pkg/markdown/       → HTML → Markdown parser (used to build the text that gets embedded)
+usecase/            → Business logic with interface definitions
+internal/handler    → HTTP request handlers (chi router)
+internal/presenter  → Request/response DTOs
+internal/database   → GORM + SQLite persistence (gorm.go) and Chroma vector store (chroma.go)
+internal/feed       → RSS feed fetcher (gofeed) — emits event.Feed
+internal/ml         → Ollama embedding client
+internal/queue      → Watermill in-memory broker (watermill.go, used in production) and RabbitMQ client (rabbitmq.go, currently not wired)
+internal/storage    → S3-compatible object storage (upload + presign)
+cmd/api/            → Single binary: REST API server plus every background consumer, run as goroutines
+e2e/                → End-to-end tests over the HTTP router with an in-memory broker
 ```
 
 There is no separate worker process: `cmd/api/main.go` starts the HTTP server and launches `HandleFeed`, `ConsumeImage`, `Article` and `UpdateFeeds` as goroutines sharing one `queue.WatermillBroker` (Watermill `gochannel`, in-memory, `Persistent: true`). Messages do not survive a restart.
@@ -199,7 +199,7 @@ Structs that are populated from a domain entity (types living in `pkg/`) must be
 func NewFeedResponse(feed rss.Feed) FeedResponse { ... }
 response := presenter.NewFeedResponse(feed)
 
-// incorrect — do not fill presenter/model structs inline
+// incorrect — do not fill internal/presenter or model structs inline
 response := presenter.FeedResponse{ID: feed.ID, Name: feed.Name, URL: feed.URL}
 ```
 
@@ -210,4 +210,4 @@ func (f Feed) ToDomain() rss.Feed { ... }
 domain := model.ToDomain()
 ```
 
-This applies to all layers that bridge to the domain: `presenter/`, `internal/database/model/`, and `pkg/event/`.
+This applies to all layers that bridge to the domain: `internal/presenter/`, `internal/database/model/`, and `pkg/event/`.

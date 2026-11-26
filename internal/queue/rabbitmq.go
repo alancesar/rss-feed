@@ -1,3 +1,5 @@
+// Package queue provides message broker adapters: RabbitMQ over AMQP 0-9-1 and an
+// in-memory Watermill broker.
 package queue
 
 import (
@@ -9,27 +11,33 @@ import (
 )
 
 type (
+	// RabbitMQ wraps an AMQP connection and creates publishers and subscribers on it.
 	RabbitMQ struct {
 		conn *amqp.Connection
 	}
 
+	// RabbitMQPublisher publishes messages to an exchange through its own AMQP channel.
 	RabbitMQPublisher struct {
 		channel  *amqp.Channel
 		exchange string
 	}
 
+	// RabbitMQSubscriber consumes queues through its own AMQP channel and exposes the messages
+	// as deliveries.
 	RabbitMQSubscriber struct {
 		channel    *amqp.Channel
 		deliveries chan event.Delivery
 	}
 )
 
+// NewRabbitMQ creates a RabbitMQ on top of an established AMQP connection.
 func NewRabbitMQ(conn *amqp.Connection) RabbitMQ {
 	return RabbitMQ{
 		conn: conn,
 	}
 }
 
+// NewPublisher opens a channel and returns a publisher that sends to the given exchange.
 func (r RabbitMQ) NewPublisher(exchange string) (*RabbitMQPublisher, error) {
 	ch, err := r.conn.Channel()
 	if err != nil {
@@ -42,6 +50,7 @@ func (r RabbitMQ) NewPublisher(exchange string) (*RabbitMQPublisher, error) {
 	}, nil
 }
 
+// NewSubscriber opens a channel and returns a subscriber on it.
 func (r RabbitMQ) NewSubscriber() (*RabbitMQSubscriber, error) {
 	ch, err := r.conn.Channel()
 	if err != nil {
@@ -54,10 +63,13 @@ func (r RabbitMQ) NewSubscriber() (*RabbitMQSubscriber, error) {
 	}, nil
 }
 
+// Close closes the underlying AMQP connection.
 func (r RabbitMQ) Close() error {
 	return r.conn.Close()
 }
 
+// Publish JSON-encodes the message payload and publishes it to the exchange, using the
+// message topic as routing key and its headers as AMQP headers.
 func (p *RabbitMQPublisher) Publish(ctx context.Context, e event.Message) error {
 	body, err := json.Marshal(e.Payload)
 	if err != nil {
@@ -74,6 +86,9 @@ func (p *RabbitMQPublisher) Publish(ctx context.Context, e event.Message) error 
 	return err
 }
 
+// Subscribe consumes the queue named after the topic, with manual acknowledgements, and
+// forwards each message as a delivery. Ack acknowledges the message; Nack rejects it and
+// optionally requeues it. Every call shares the subscriber's single deliveries channel.
 func (c RabbitMQSubscriber) Subscribe(ctx context.Context, topic event.Topic) (<-chan event.Delivery, error) {
 	deliveries, err := c.channel.ConsumeWithContext(ctx, string(topic), "", false, false, false, false, nil)
 	if err != nil {
@@ -100,6 +115,7 @@ func (c RabbitMQSubscriber) Subscribe(ctx context.Context, topic event.Topic) (<
 	return c.deliveries, nil
 }
 
+// Close closes the deliveries channel and the AMQP channel.
 func (c RabbitMQSubscriber) Close() error {
 	close(c.deliveries)
 	return c.channel.Close()

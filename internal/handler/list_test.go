@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"rss-feed/handler"
+	"rss-feed/internal/handler"
+	"rss-feed/internal/presenter"
 	"rss-feed/pkg/rss"
-	"rss-feed/presenter"
 	"rss-feed/usecase"
 )
 

@@ -1,3 +1,4 @@
+// Package storage provides object storage adapters.
 package storage
 
 import (
@@ -13,6 +14,8 @@ import (
 )
 
 type (
+	// S3 stores objects in a single bucket of an S3-compatible service. Uploads go through the
+	// AWS SDK transfer manager and downloads are granted through presigned URLs.
 	S3 struct {
 		client *s3.PresignClient
 		tm     *transfermanager.Client
@@ -20,6 +23,9 @@ type (
 	}
 )
 
+// NewS3 creates an S3 store for the bucket at the given endpoint and region. It loads the
+// default AWS configuration (credentials come from the standard AWS sources) and uses
+// path-style addressing, which S3-compatible services commonly require.
 func NewS3(endpoint, region, bucket string) (*S3, error) {
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion(region),

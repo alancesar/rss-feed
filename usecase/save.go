@@ -10,11 +10,15 @@ import (
 )
 
 type (
+	// FeedStore persists feeds.
 	FeedStore interface {
+		// GetFeedByURL returns the feed registered with the URL and whether it was found.
 		GetFeedByURL(context.Context, string) (rss.Feed, bool, error)
+		// CreateFeed persists a new feed.
 		CreateFeed(context.Context, rss.Feed) error
 	}
 
+	// SaveFeed registers a new feed source and announces its articles.
 	SaveFeed struct {
 		fetcher   FeedFetcher
 		store     FeedStore
@@ -22,6 +26,7 @@ type (
 	}
 )
 
+// NewSaveFeed creates a SaveFeed use case that fetches with fetcher, persists into store and announces through publisher.
 func NewSaveFeed(fetcher FeedFetcher, store FeedStore, publisher Publisher) *SaveFeed {
 	return &SaveFeed{
 		publisher: publisher,
@@ -30,6 +35,9 @@ func NewSaveFeed(fetcher FeedFetcher, store FeedStore, publisher Publisher) *Sav
 	}
 }
 
+// Execute registers the feed at url. It fails with rss.ErrFeedAlreadyExists if the feed is
+// already registered; otherwise it fetches the feed, persists it and publishes a "feed found"
+// event so its articles get processed. It returns the persisted feed.
 func (uc SaveFeed) Execute(ctx context.Context, url string) (rss.Feed, error) {
 	log := zerolog.Ctx(ctx)
 

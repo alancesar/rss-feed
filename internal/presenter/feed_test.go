@@ -3,8 +3,8 @@ package presenter_test
 import (
 	"testing"
 
+	"rss-feed/internal/presenter"
 	"rss-feed/pkg/rss"
-	"rss-feed/presenter"
 )
 
 func TestNewFeedResponse(t *testing.T) {

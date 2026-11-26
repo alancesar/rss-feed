@@ -15,14 +15,20 @@ import (
 )
 
 type (
+	// FileStorage stores files.
 	FileStorage interface {
+		// Create writes the content of img at the given path.
 		Create(ctx context.Context, path string, img io.Reader) error
 	}
 
+	// ImageStore records images belonging to articles.
 	ImageStore interface {
+		// SaveImage associates the image with the article.
 		SaveImage(ctx context.Context, articleID string, image rss.Image) error
 	}
 
+	// ConsumeImage is a consumer that downloads the image of every discovered article,
+	// stores the file and records it for the article.
 	ConsumeImage struct {
 		client     *http.Client
 		subscriber Subscriber
@@ -31,6 +37,8 @@ type (
 	}
 )
 
+// NewConsumeImage creates a ConsumeImage use case that downloads with client, listens through
+// subscriber, stores files in storage and records them in db.
 func NewConsumeImage(client *http.Client, subscriber Subscriber, storage FileStorage, db ImageStore) *ConsumeImage {
 	return &ConsumeImage{
 		client:     client,
@@ -40,6 +48,11 @@ func NewConsumeImage(client *http.Client, subscriber Subscriber, storage FileSto
 	}
 }
 
+// Execute consumes "article found" events. Articles without an image are acknowledged and
+// skipped; download, storage or persistence failures are rejected with a request to redeliver,
+// and messages that cannot be decoded are rejected with a request not to redeliver. Whether the
+// broker honours that request is up to the broker. It runs until the subscription is
+// closed and closes the subscriber on exit.
 func (uc ConsumeImage) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Msg("starting consume image")
@@ -81,6 +94,9 @@ func (uc ConsumeImage) Execute(ctx context.Context) error {
 	return nil
 }
 
+// saveImageToStorage downloads the image at imgURL, stores it under
+// images/original/{articleID}{extension} (the extension comes from the URL) and then
+// records it as the article's original image. A non-200 response is an error.
 func (uc ConsumeImage) saveImageToStorage(ctx context.Context, articleID, imgURL string) error {
 	resp, err := uc.client.Get(imgURL)
 	if err != nil {

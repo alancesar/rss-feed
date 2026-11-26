@@ -11,11 +11,15 @@ import (
 )
 
 type (
+	// FeedsStore reads and updates the registered feeds.
 	FeedsStore interface {
+		// GetAllFeeds returns every registered feed.
 		GetAllFeeds(ctx context.Context) ([]rss.Feed, error)
+		// UpdateFeed persists the changes made to the feed.
 		UpdateFeed(ctx context.Context, feed rss.Feed) error
 	}
 
+	// UpdateFeeds keeps the registered feeds fresh, refreshing them periodically and on demand.
 	UpdateFeeds struct {
 		store   FeedsStore
 		fetcher FeedFetcher
@@ -23,6 +27,8 @@ type (
 	}
 )
 
+// NewUpdateFeeds creates an UpdateFeeds use case that reads feeds from store, fetches them with
+// fetcher and publishes and listens for refresh jobs through broker.
 func NewUpdateFeeds(store FeedsStore, fetcher FeedFetcher, broker Broker) *UpdateFeeds {
 	return &UpdateFeeds{
 		store:   store,
@@ -31,6 +37,10 @@ func NewUpdateFeeds(store FeedsStore, fetcher FeedFetcher, broker Broker) *Updat
 	}
 }
 
+// Execute refreshes every feed once immediately, then again on every updateInterval and
+// whenever a refresh job arrives (which also restarts the interval). A failure in the initial
+// refresh is returned; later failures are logged and the loop continues. It runs until ctx is
+// cancelled (returning ctx.Err()) or the subscription is closed (returning nil).
 func (uc UpdateFeeds) Execute(ctx context.Context, updateInterval time.Duration) error {
 	if err := uc.updateFeeds(ctx); err != nil {
 		return err
@@ -78,6 +88,10 @@ func (uc UpdateFeeds) Execute(ctx context.Context, updateInterval time.Duration)
 	}
 }
 
+// updateFeeds fetches every registered feed. Feeds that fail to fetch are skipped, and so are
+// feeds that report an update time older than the one stored. Feeds that report no update time
+// are never skipped. The others are announced with a "feed found" event and then marked as
+// checked. A publish or persistence failure aborts the run.
 func (uc UpdateFeeds) updateFeeds(ctx context.Context) error {
 	feeds, err := uc.store.GetAllFeeds(ctx)
 	if err != nil {

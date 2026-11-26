@@ -10,16 +10,20 @@ import (
 )
 
 type (
+	// ArticleStore indexes articles so they can later be found by meaning.
 	ArticleStore interface {
+		// CreateArticle vectorizes the article text and stores it in the search index.
 		CreateArticle(ctx context.Context, article rss.Article) error
 	}
 
+	// Article is a consumer that indexes every discovered article for semantic search.
 	Article struct {
 		subscriber Subscriber
 		store      ArticleStore
 	}
 )
 
+// NewArticle creates an Article use case that listens through subscriber and indexes into store.
 func NewArticle(subscriber Subscriber, store ArticleStore) *Article {
 	return &Article{
 		subscriber: subscriber,
@@ -27,6 +31,11 @@ func NewArticle(subscriber Subscriber, store ArticleStore) *Article {
 	}
 }
 
+// Execute consumes "article found" events and indexes each article for semantic search.
+// Messages that cannot be decoded are rejected with a request not to redeliver them, and
+// indexing failures are rejected with a request to redeliver them; whether the broker honours
+// that request is up to the broker. It blocks until ctx is cancelled (returning ctx.Err())
+// or the subscription is closed (returning nil), and closes the subscriber on exit.
 func (uc *Article) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Msg("starting consume articles")

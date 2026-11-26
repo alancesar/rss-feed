@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"rss-feed/internal/presenter"
 	"rss-feed/pkg/rss"
-	"rss-feed/presenter"
 	"rss-feed/usecase"
 
 	"github.com/go-chi/render"
@@ -21,6 +21,7 @@ import (
 //	@Param			request	body		presenter.AddFeedRequest	true	"Feed URL"
 //	@Success		201		{object}	presenter.FeedResponse
 //	@Failure		400		{string}	string	"invalid request body"
+//	@Failure		409		{string}	string	"feed already exists"
 //	@Failure		500		{string}	string	"internal server error"
 //	@Router			/feeds [post]
 func AddFeed(uc *usecase.SaveFeed) http.HandlerFunc {

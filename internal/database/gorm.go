@@ -1,3 +1,5 @@
+// Package database provides persistence adapters: a relational store built on GORM
+// (Gorm) and a vector store built on Chroma (Chroma).
 package database
 
 import (
@@ -11,16 +13,20 @@ import (
 )
 
 type (
+	// Gorm is a relational store for feeds, articles and images, backed by a GORM connection.
 	Gorm struct {
 		db *gorm.DB
 	}
 )
 
+// NewGorm creates a Gorm store on top of db and auto-migrates the article, feed and image
+// tables. Migration errors are ignored.
 func NewGorm(db *gorm.DB) *Gorm {
 	_ = db.AutoMigrate(&model.Article{}, &model.Feed{}, &model.Image{})
 	return &Gorm{db: db}
 }
 
+// CreateFeed inserts the feed along with its articles. It fails if a record with the same ID exists.
 func (g Gorm) CreateFeed(ctx context.Context, feed rss.Feed) error {
 	m := model.NewFeedFromDomain(feed)
 	if err := g.db.WithContext(ctx).Create(&m).Error; err != nil {
@@ -30,6 +36,8 @@ func (g Gorm) CreateFeed(ctx context.Context, feed rss.Feed) error {
 	return nil
 }
 
+// GetFeedByURL returns the feed with the given URL, with its articles loaded. The boolean is
+// false, with a nil error, when no such feed exists.
 func (g Gorm) GetFeedByURL(ctx context.Context, url string) (rss.Feed, bool, error) {
 	var m model.Feed
 	if err := g.db.WithContext(ctx).Where("url = ?", url).Preload("Articles").First(&m).Error; err != nil {
@@ -43,6 +51,8 @@ func (g Gorm) GetFeedByURL(ctx context.Context, url string) (rss.Feed, bool, err
 	return m.ToDomain(), true, nil
 }
 
+// GetArticleByID returns the article with the given ID, with its feed and images loaded.
+// The boolean is false, with a nil error, when no such article exists.
 func (g Gorm) GetArticleByID(ctx context.Context, articleID string) (rss.Article, bool, error) {
 	var m model.Article
 	if err := g.db.WithContext(ctx).
@@ -60,6 +70,8 @@ func (g Gorm) GetArticleByID(ctx context.Context, articleID string) (rss.Article
 	return m.ToDomain(), true, nil
 }
 
+// GetArticlesFromDate returns the articles whose publication calendar day (SQLite
+// strftime on published_at) equals the day of date, with feed and images loaded.
 func (g Gorm) GetArticlesFromDate(ctx context.Context, date time.Time) ([]rss.Article, error) {
 	var articles []model.Article
 	if err := g.db.WithContext(ctx).
@@ -77,6 +89,7 @@ func (g Gorm) GetArticlesFromDate(ctx context.Context, date time.Time) ([]rss.Ar
 	return result, nil
 }
 
+// GetAllFeeds returns every stored feed, without their articles.
 func (g Gorm) GetAllFeeds(ctx context.Context) ([]rss.Feed, error) {
 	var feeds []model.Feed
 	if err := g.db.WithContext(ctx).Find(&feeds).Error; err != nil {
@@ -90,11 +103,14 @@ func (g Gorm) GetAllFeeds(ctx context.Context) ([]rss.Feed, error) {
 	return result, nil
 }
 
+// UpdateFeed upserts the feed, and any articles it carries, by primary key.
 func (g Gorm) UpdateFeed(ctx context.Context, feed rss.Feed) error {
 	m := model.NewFeedFromDomain(feed)
 	return g.db.WithContext(ctx).Save(&m).Error
 }
 
+// SaveArticle upserts the article by primary key, linking it to article.Feed.ID.
+// It fails when the article has no feed ID.
 func (g Gorm) SaveArticle(ctx context.Context, article rss.Article) error {
 	if article.Feed.ID == "" {
 		return errors.New("article feed ID is required")
@@ -104,6 +120,7 @@ func (g Gorm) SaveArticle(ctx context.Context, article rss.Article) error {
 	return g.db.WithContext(ctx).Save(&m).Error
 }
 
+// SaveImage upserts the image by primary key, linking it to the given article.
 func (g Gorm) SaveImage(ctx context.Context, articleID string, img rss.Image) error {
 	m := model.NewImageFromDomain(img, articleID)
 	if err := g.db.WithContext(ctx).Save(&m).Error; err != nil {
