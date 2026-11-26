@@ -3,10 +3,17 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"rss-feed/pkg/event"
 	"rss-feed/pkg/rss"
 
 	"github.com/rs/zerolog"
+)
+
+var (
+	// ErrInvalidFeed is returned when a feed event cannot be decoded.
+	ErrInvalidFeed = errors.New("invalid feed")
 )
 
 type (
@@ -33,10 +40,11 @@ func NewHandleFeed(broker Broker, store FeedArticleStore) *HandleFeed {
 }
 
 // Execute consumes "feed found" events. For each article in the feed it persists the
-// article and then publishes an "article found" event. On the first failure the whole
-// feed message is rejected with a request to redeliver it; messages that cannot be decoded are
-// rejected with a request not to redeliver them. Whether the broker honours that request is up
-// to the broker. It runs until the subscription is closed and closes the broker on exit.
+// article and then publishes an "article found" event. A message that cannot be decoded
+// (ErrInvalidFeed) is rejected with a request not to redeliver it. Any other failure, such as
+// an article that cannot be saved or published, rejects the whole feed message with a request
+// to redeliver it. Whether the broker honours either request is up to the broker. It runs
+// until the subscription is closed and closes the broker on exit.
 func (uc HandleFeed) Execute(ctx context.Context) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Info().Msg("starting consume feed")
@@ -52,35 +60,51 @@ func (uc HandleFeed) Execute(ctx context.Context) error {
 	}
 
 	for delivery := range deliveries {
-		var e event.Feed
-		if err := json.Unmarshal(delivery.Payload, &e); err != nil {
-			logger.Error().Err(err).Msg("failed to unmarshal feed")
-			delivery.Nack(false)
+		if err := uc.handleFeed(ctx, delivery.Payload); err != nil {
+			if errors.Is(err, ErrInvalidFeed) {
+				logger.Error().Err(err).Msg("discarding invalid feed")
+				delivery.Nack(false)
+				continue
+			}
+
+			logger.Error().Err(err).Msg("failed to handle feed")
+			delivery.Nack(true)
 			continue
 		}
 
-		failed := false
-		for _, article := range e.Articles {
-			if err := uc.store.SaveArticle(ctx, article.ToDomain()); err != nil {
-				logger.Error().Err(err).Msg("failed to save article")
-				failed = true
-				break
-			}
+		delivery.Ack()
+	}
 
-			logger.Info().Str("article_id", article.ArticleID).Msg("publishing article event")
+	return nil
+}
 
-			if err := uc.broker.Publish(ctx, event.NewArticleFound(article)); err != nil {
-				logger.Error().Err(err).Msg("failed to publish article")
-				failed = true
-				break
-			}
+// handleFeed decodes the feed event and handles each of its articles, stopping at the
+// first failure. A payload that cannot be decoded yields ErrInvalidFeed.
+func (uc HandleFeed) handleFeed(ctx context.Context, payload event.Payload) error {
+	var e event.Feed
+	if err := json.Unmarshal(payload, &e); err != nil {
+		return fmt.Errorf("%w: %w", ErrInvalidFeed, err)
+	}
+
+	for _, article := range e.Articles {
+		if err := uc.handleArticle(ctx, article); err != nil {
+			return err
 		}
+	}
 
-		if failed {
-			delivery.Nack(true)
-		} else {
-			delivery.Ack()
-		}
+	return nil
+}
+
+// handleArticle persists the article and publishes an "article found" event for it.
+func (uc HandleFeed) handleArticle(ctx context.Context, article event.Article) error {
+	if err := uc.store.SaveArticle(ctx, article.ToDomain()); err != nil {
+		return fmt.Errorf("save article %s: %w", article.ArticleID, err)
+	}
+
+	zerolog.Ctx(ctx).Info().Str("article_id", article.ArticleID).Msg("publishing article event")
+
+	if err := uc.broker.Publish(ctx, event.NewArticleFound(article)); err != nil {
+		return fmt.Errorf("publish article %s: %w", article.ArticleID, err)
 	}
 
 	return nil

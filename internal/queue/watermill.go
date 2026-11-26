@@ -49,9 +49,10 @@ func (b *WatermillBroker) Publish(ctx context.Context, e event.Message) error {
 	return b.pubSub.Publish(string(e.Topic), msg)
 }
 
-// Subscribe subscribes to the topic and returns a channel of deliveries. Ack and Nack map to
-// Watermill's Ack and Nack (the requeue flag is ignored; Watermill redelivers nacked
-// messages on its own). The channel is closed when ctx is cancelled or the underlying
+// Subscribe subscribes to the topic and returns a channel of deliveries. Ack maps to
+// Watermill's Ack. Nack(true) maps to Watermill's Nack, which redelivers the message at once;
+// Nack(false) acks the message instead, so it is dropped rather than redelivered (GoChannel
+// has no dead-letter queue). The channel is closed when ctx is cancelled or the underlying
 // subscription ends.
 func (b *WatermillBroker) Subscribe(ctx context.Context, topic event.Topic) (<-chan event.Delivery, error) {
 	messages, err := b.pubSub.Subscribe(ctx, string(topic))
@@ -85,7 +86,12 @@ func (b *WatermillBroker) Subscribe(ctx context.Context, topic event.Topic) (<-c
 					Ack: func() {
 						msg.Ack()
 					},
-					Nack: func(_ bool) {
+					Nack: func(requeue bool) {
+						if !requeue {
+							msg.Ack()
+							return
+						}
+
 						msg.Nack()
 					},
 				}
