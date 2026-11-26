@@ -17,6 +17,7 @@ Resolve the target from, in order: the path(s) the user named, the files being c
 |---|---|
 | `usecase/` | [sops/usecase.md](sops/usecase.md) |
 | `internal/` (all subpackages) | [sops/internal.md](sops/internal.md) |
+| OpenAPI/Swagger annotations: `internal/handler/`, `presenter/`, API block in `cmd/api/main.go`, or any request to document an endpoint | [sops/openapi.md](sops/openapi.md) (also read `internal.md` for the plain Go comments in `internal/handler/`) |
 
 If the target has no SOP:
 1. Apply only the **Common rules** below.

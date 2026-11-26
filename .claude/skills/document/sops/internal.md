@@ -15,11 +15,9 @@ These packages are adapters: they are where concrete technologies live. This SOP
 
 Handler doc comments are **generated API documentation**: the `// Name godoc` blocks carry `swag` annotations (`@Summary`, `@Param`, `@Success`, `@Router`, ...) that produce the Swagger docs (`make docs`).
 
-- Keep the existing `// Name godoc` + annotation block format exactly; never reword, reorder, or delete annotation lines unless the endpoint's behavior changed.
-- Document a handler by completing its annotations (`@Summary`, `@Description`, `@Tags`, `@Accept`, `@Produce`, `@Param`, `@Success`, `@Failure`, `@Router`) so they match the code's real status codes and request/response types.
-- Annotations describe the HTTP contract, so route paths and methods belong here; the "no caller references" rule still applies to everything else (no mention of use cases or `cmd/api`).
+- The annotation blocks are governed by [openapi.md](openapi.md): follow it for format, order, status codes and messages. Never reword, reorder, or delete annotation lines unless the endpoint's behavior changed.
+- Annotations describe the HTTP contract, so route paths and methods belong there; the "no caller references" rule still applies to every other comment (no mention of use cases or `cmd/api`).
 - Plain Go comments (constructor, types) follow the normal rules below.
-- Verify with `make docs` (requires `swag`) that generation still succeeds.
 
 ## What to document
 
